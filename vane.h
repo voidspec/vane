@@ -1,5 +1,5 @@
 /*
-VANE	2017 July 19
+VANE    2017 July 19
 
 
 MIT License
@@ -25,8 +25,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef	___VANE_H_20170719
-#define	___VANE_H_20170719
+#ifndef ___VANE_H_20170719
+#define ___VANE_H_20170719
 
 #include <type_traits>
 #include <array>
@@ -36,286 +36,180 @@ SOFTWARE.
 #include <tuple>
 #include <iterator>
 #include <typeinfo>
-#include<exception>
+#include <exception>
 #include <unordered_map>
 #include <bits/functional_hash.h>
 #include <iostream>
 #include <functional>
 #include <vector>
-#include <iostream>
+#include <iomanip>
+#include <typeinfo>
+#include <numeric>
 
 namespace vane {/////////////////////////////////////////////////////////////////////////////////////////////
 
 
-/*-----------------------------------------------------------------------------------
-	type stuff
+template<typename...> using __void_t = void;
+//template <bool>   struct __bool_t { };
+//template <typename...>    struct __empty_t { };
+template<typename T,T...> using void_v = void;
+
+/*--------------------------------------------
+    make_static<Ts...>
 */
-
-template<typename T>
-	constexpr std::conditional_t<std::__or_<std::is_same<T,char>,std::is_same<T,unsigned char>>::value,unsigned,  std::make_unsigned_t<T>> mask_msb = (std::make_unsigned_t<T>(-1)>>1)+1;
-
-
-
-template<typename T, T...I,T...J> constexpr
-	auto concat_iseq(std::integer_sequence<T,I...>,std::integer_sequence<T,J...>) {
-		return std::integer_sequence<T,I...,J...>{};
-	}
-template<size_t...I,size_t...J> constexpr
-	auto concat_index_sequence(std::index_sequence<I...> i,std::index_sequence<J...> j) {
-		return concat_iseq<size_t>(i,j);
-	}
-
-
-#ifdef	_MSC_VER  ///////////////////////////////////////////
-/*
-	from gcc stl
-*/
-	template<typename...> using __void_t = void;
-
-	template<typename...>
-	struct __or_;
-
-	template<>
-	struct __or_<> : public std::false_type { };
-
-	template<typename _B1>
-	struct __or_<_B1>
-	: public _B1
-	{ };
-
-	template<typename _B1, typename _B2>
-	struct __or_<_B1, _B2>
-	: public std::conditional<_B1::value, _B1, _B2>::type
-	{ };
-
-	template<typename _B1, typename _B2, typename _B3, typename... _Bn>
-	struct __or_<_B1, _B2, _B3, _Bn...>
-	: public std::conditional<_B1::value, _B1, __or_<_B2, _B3, _Bn...>>::type
-	{ };
-
-	template<typename...>
-	struct __and_;
-
-	template<>
-	struct __and_<>
-	: public std::true_type
-	{ };
-
-	template<typename _B1>
-	struct __and_<_B1>
-	: public _B1
-	{ };
-
-	template<typename _B1, typename _B2>
-	struct __and_<_B1, _B2>
-	: public std::conditional<_B1::value, _B2, _B1>::type
-	{ };
-
-	template<typename _B1, typename _B2, typename _B3, typename... _Bn>
-	struct __and_<_B1, _B2, _B3, _Bn...>
-	: public std::conditional<_B1::value, __and_<_B2, _B3, _Bn...>, _B1>::type
-	{ };
-
-	template<typename _Pp>
-	struct __not_
-	: public std::integral_constant<bool, !_Pp::value>
-	{ };
-#elif defined(__GNUC__) ////////////////////////////////////////////////////
-	using std::__or_;
-	using std::__and_;
-	using std::__not_;
-
-	using std::__void_t;
-#endif /////////////////////////////////////////////////////////////////////
-
-
-template <bool>	struct __bool_t { };
-template<typename T,T...>
-using void_v = void;
-
-
-/*---------------------------------------------------------------------------------------------
-	VANE_DEFINE__HAS_MEMBER(xxx)
-
-	__has_member_xxx<T>:value
-	__has_member_xxx_v<T>
-*/
-#define	VANE_DEFINE__HAS_MEMBER(member)					\
-		template<typename T,typename=vane::void_v<void>>		\
-		struct __has_member_##member : std::false_type { };	\
-														\
-		template<typename T>							\
-		struct __has_member_##member<T, vane::void_v<size_t, sizeof( declval<T>().member)>> : std::true_type { };\
-														\
-		template<typename T>							\
-		constexpr auto __has_member_##member##_v = __has_member_##member<T>::value;	
+    template <typename...Ts> struct make_static;
 
 
 /*--------------------------------------------
-	multi_array<int, 3,4,5> a;
+    is_tuple<T>::value
+*/
+template<typename T>
+struct is_tuple {
+    enum { value = false };
+};
+
+template<typename...Ts>
+struct is_tuple<std::tuple<Ts...>> {
+    enum { value = true };
+};
+
+template <typename T>
+using is_tuple_v = typename is_tuple<T>::value;
+
+/*--------------------------------------------
+    multi_array<int, 3,4,5> a;
 */
 namespace __helper__ {
-	template<typename T, size_t...Ns>
-	struct _marray;
+    template<typename T, size_t...Ns>
+    struct _marray;
 
-	template<typename T, size_t N, size_t...Ns>
-	struct _marray<T,N,Ns...> : _marray<T,Ns...> {
-		using type = std::array<typename _marray<T,Ns...>::type, N>;
-	};
+    template<typename T, size_t N, size_t...Ns>
+    struct _marray<T,N,Ns...> : _marray<T,Ns...> {
+        using type = std::array<typename _marray<T,Ns...>::type, N>;
+    };
 
-	template<typename T, size_t N>
-	struct _marray<T,N> {
-		using type = std::array<T,N>;
-	};
+    template<typename T, size_t N>
+    struct _marray<T,N> {
+        using type = std::array<T,N>;
+    };
 }
+
 template <typename T, size_t...Ns>
 using multi_array = typename __helper__::_marray<T,Ns...>::type;
+
+
 /*--------------------------------------------
-	multi_array_rank<array>
+    multi_array_rank<array>
 */
-	template<typename T>
-	struct multi_array_rank {
-		enum { value = 0 };
-	};
+template<typename T>
+struct multi_array_rank {
+    enum { value = 0 };
+};
 
-	template<typename T, size_t N>
-	struct multi_array_rank<std::array<T,N>> {
-		enum { value = 1 + multi_array_rank<T>::value };
-	};
+template<typename T, size_t N>
+struct multi_array_rank<std::array<T,N>> {
+    enum { value = 1 + multi_array_rank<T>::value };
+};
 
-	template<typename T, size_t N>
-	struct multi_array_rank<const std::array<T,N>> {
-		enum { value = 1 + multi_array_rank<T>::value };
-	};
+template<typename T, size_t N>
+struct multi_array_rank<const std::array<T,N>> {
+    enum { value = 1 + multi_array_rank<T>::value };
+};
 
 template <typename T>
 constexpr int multi_array_rank_v = multi_array_rank<T>::value;
 
-
 /*--------------------------------------------
-	multi_array_getAt(a,1,2,3)
-	multi_array_getAt(a, make_array(1,2,3,4));
+    multi_array_getAt
 */
 namespace __helper__ {
-	template<typename T>
-	struct __multi_array_wrap {
-		using Data = T;
+    template<typename T>
+    struct __multi_array_wrap {
+        using Data = T;
+        static constexpr
+        Data &at(T &a) {
+            return a;
+        }
+    };
+    template<typename T, size_t N>
+    struct __multi_array_wrap<std::array<T,N>> {
+        using Data = typename __multi_array_wrap<T>::Data;
 
-		static constexpr
-		Data &at(T &a) {
-			return a;
-		}
-	};
-	template<typename T, size_t N>
-	struct __multi_array_wrap<std::array<T,N>> {
-		using Data = typename __multi_array_wrap<T>::Data;
+        template<typename I,typename...Is>
+        static constexpr
+        Data &at(std::array<T,N> &a, I i, Is...is) {
+            return __multi_array_wrap<T>::at(a[i], is...);
+        }
+    };
+    template<typename T, size_t N>
+    struct __multi_array_wrap<const std::array<T,N>> {
+        using Data = typename __multi_array_wrap<const T>::Data;
 
-		template<typename I,typename...Is>
-		static constexpr
-		Data &at(std::array<T,N> &a, I i, Is...is) {
-			return __multi_array_wrap<T>::at(a[i], is...);
-		}
-	};
-	template<typename T, size_t N>
-	struct __multi_array_wrap<const std::array<T,N>> {
-		using Data = typename __multi_array_wrap<const T>::Data;
-
-		template<typename I,typename...Is>
-		static constexpr
-		Data &at(const std::array<T,N> &a, I i, Is...is) {
-			assert( 0 <= i );
-			assert( i <  N );
-			return __multi_array_wrap<const T>::at(a[i], is...);
-		}
-	};
+        template<typename I,typename...Is>
+        static constexpr
+        Data &at(const std::array<T,N> &a, I i, Is...is) {
+            assert( 0 <= i );
+            assert( i <  (int)N );
+            return __multi_array_wrap<const T>::at(a[i], is...);
+        }
+    };
 }//end __helper__
 
-	template<typename MA, typename...Is>
-	typename __helper__::__multi_array_wrap<MA>::Data &
-	multi_array_getAt(MA &a, Is...is) {
-		return __helper__::__multi_array_wrap<MA>::at(a, is...);
-	};
+template<typename MA, typename...Is> inline
+typename __helper__::__multi_array_wrap<MA>::Data &
+multi_array_getAt(MA &a, Is...is) {
+    return __helper__::__multi_array_wrap<MA>::at(a, is...);
+};
 
 
-		template <typename MA, typename TI, size_t...I>
-		typename __helper__::__multi_array_wrap<MA>::Data &
-		__ma_helper_get(MA &a, const std::array<TI,sizeof...(I)> &ai, std::index_sequence<I...>) {
-			return multi_array_getAt(a, ai[I]...);
-		}
+template <typename MA, typename TI, size_t...Is> inline
+typename __helper__::__multi_array_wrap<MA>::Data &
+__ma_helper_get(MA &a, const std::array<TI,sizeof...(Is)> &ai, std::index_sequence<Is...>) {
+    return __helper__::__multi_array_wrap<MA>::at(a, ai[Is]...);
+}
 
-	template <typename MA, typename AI>
-	const typename __helper__::__multi_array_wrap<MA>::Data &
-	multi_array_getAt(const MA &a, const AI &ai) {
-		return __ma_helper_get(a, ai, std::make_index_sequence<multi_array_rank<MA>::value>());
-	}
+template <typename MA, typename AI> inline
+const typename __helper__::__multi_array_wrap<MA>::Data &
+multi_array_getAt(const MA &a, const AI &ai) {
+    return __ma_helper_get(a, ai, std::make_index_sequence<multi_array_rank<MA>::value>());
+}
 
-	template <typename MA, typename AI>
-	typename __helper__::__multi_array_wrap<MA>::Data &
-	multi_array_getAt(MA &a, const AI &ai) {
-		return __ma_helper_get(a, ai, std::make_index_sequence<multi_array_rank<MA>::value>());
-	}
-
-
-/*--------------------------------------------
-	multi_array_flat_indexer<decltype(a)>::get(1,2,3)
-*/
-	template<typename T>
-	struct multi_array_flat_indexer {
-		enum { size = 1 };
-		using Data = T;
-
-		static constexpr
-		int get() { return 0; }
-	};
-
-	template<typename T, size_t N>
-	struct multi_array_flat_indexer<std::array<T,N>> {
-		using PrevT = T;
-		using Prev  = multi_array_flat_indexer<T>;
-		enum { size = N*Prev::size };
-		using Data = typename Prev::Data;
-
-		template<typename I,typename...Is>
-		static constexpr
-		int get(I i, Is...is) {
-			return i*Prev::size + Prev::get(is...);
-		}
-	};
-/*--------------------------------------------
-	multi_array_regular<int, 5,2>  --> multi_array<int, 2,2,2,2,2>
-*/
-		template <typename T, size_t W, typename Seq>
-		struct __multi_array_regular;
-
-		template <typename T, size_t W, size_t...I>
-		struct __multi_array_regular<T,W,std::index_sequence<I...>> {
-			using type = multi_array<T,(W+I-I)...>;
-		};
-
-	template <typename T, size_t Dim, size_t W>
-	using multi_array_regular = typename __multi_array_regular<T, W, std::make_index_sequence<Dim>>::type;
-
-/*--------------------------------------------
-	sized_pdata<int,10>
-
-		static const array<int,10> a{...};
-		static const __d = sized_pdata<int>(a.size(), &a[0]);
-*/
-	template<typename T, typename SIZE_T=unsigned>
-	struct sized_pdata {
-		SIZE_T	size;
-		T		*data;
-		constexpr sized_pdata(unsigned _size, T *_data) : size(_size), data(_data) { }
-	};
+template <typename MA, typename AI> inline
+typename __helper__::__multi_array_wrap<MA>::Data &
+multi_array_getAt(MA &a, const AI &ai) {
+    return __ma_helper_get(a, ai, std::make_index_sequence<multi_array_rank<MA>::value>());
+}
 
 
 
 /*--------------------------------------------
-	AbstractDummy
+    __varray2d<bool>
 */
-struct AbstractDummy	{ virtual ~AbstractDummy()=0; };
-struct abstract_dummy	{ virtual ~abstract_dummy()=0; };
+#pragma pack(push,1)
+template<typename ET=unsigned char>
+struct __varray2d
+{
+    using element_type = ET;
+    int size() const { return _size; }
 
+    int _size;
+    ET  _data[0];
+
+    const ET *data() const { return _data; }
+    ET *data() { return _data; }
+
+    const ET *operator[](int i) const { 
+        assert( 0<=i );
+        assert( i < _size );
+        return _data + i*_size;
+    }
+    ET *operator[](int i) { 
+        assert( 0<=i );
+        assert( i < _size );
+        return _data + i*_size;
+    }
+};
+#pragma pack(pop)
 
 
 /*----------------------------------------------------------------*/
@@ -324,2022 +218,4287 @@ struct resolve_signature;
 
 template<typename R, typename...Ts>
 struct resolve_signature<R(Ts...)> {
-	using return_type = R;
-	using arg_types   = std::tuple<Ts...>;
+    using return_type = R;
+    using arg_types   = std::tuple<Ts...>;
 };
 
-
-/*----------------------------------------------------------------*/
 template<typename R, typename Args>
 struct make_signature;
 
 template<typename R, typename...Ts>
 struct make_signature<R, std::tuple<Ts...>> {
-	using type = R(Ts...);
-	using return_type = R;
-	using arg_types   = std::tuple<Ts...>;
+    using type = R(Ts...);
+    using return_type = R;
+    using arg_types   = std::tuple<Ts...>;
 };
 
 
+/*--------------------------------------------------------------------------
+    remove_pointer_or_reference_t<void*>
+*/
+template<typename T>
+struct remove_pointer_or_reference { using type = T; };
+
+template<typename T>
+struct remove_pointer_or_reference<T*> { using type = T; };
+
+template<typename T>
+struct remove_pointer_or_reference<T&> { using type = T; };
+
+template<typename T>
+struct remove_pointer_or_reference<T&&> { using type = T; };
+
+template<typename T>
+using remove_pointer_or_reference_t = typename remove_pointer_or_reference<T>::type;
 
 /*--------------------------------------------------------------------------
-	remove_pointer_or_reference_t<void*>
+remove_base_const<T>
 */
-	template<typename T>
-	struct remove_pointer_or_reference { using type = T; };
+template<typename __T>
+struct remove_base_const                { using type = __T; };
 
-	template<typename T>
-	struct remove_pointer_or_reference<T*> { using type = T; };
+template<typename __T>
+struct remove_base_const<const __T>     { using type = __T; };
 
-	template<typename T>
-	struct remove_pointer_or_reference<T&> { using type = T; };
+template<typename __T>
+struct remove_base_const<const __T*>    { using type = __T*; };
 
-	template<typename T>
-	struct remove_pointer_or_reference<T&&> { using type = T; };
+template<typename __T>
+struct remove_base_const<const __T&>    { using type = __T&; };
 
-	template<typename T>
-	using remove_pointer_or_reference_t = typename remove_pointer_or_reference<T>::type;
+template<typename __T>
+struct remove_base_const<const __T&&>   { using type = __T&&; };
+
+template<typename __T>
+using remove_base_const_t = typename remove_base_const<__T>::type;
+
 
 
 /*------------------------------------------------------------------------------
-	basetype_xxx
+    basetype_xxx's
 */
-	template<typename B, typename D>
-	struct basetype_is_base_of
-		: std::is_base_of<remove_pointer_or_reference_t<B>,remove_pointer_or_reference_t<D>> { };
-
-	template<typename T>
-	struct basetype_is_polymorphic
-		: std::is_polymorphic<remove_pointer_or_reference_t<T>> { };
-
-
-/*----------------------------------------------------------------------------------
-	is_callable
-*/
-
-struct substitution_failure {}; // represent a failure to declare something
+template<typename B, typename D>
+struct basetype_is_base_of
+    : std::is_base_of<remove_pointer_or_reference_t<B>,remove_pointer_or_reference_t<D>> { };
 
 template<typename T>
-struct substitution_succeeded : std::true_type { };
-
-template<> 
-struct substitution_succeeded<substitution_failure> : std::false_type { };
-
-template<typename B, typename...X>
-struct _Check_result_of_call : B {
-	static auto check() -> decltype(B::_check(static_cast<typename B::_Tag*>(nullptr), std::declval<X>()...));
-};
-template<typename B>
-struct _Check_result_of_call<B,void> : B {
-	static auto check() -> decltype( B::_check(static_cast<typename B::_Tag*>(nullptr)) );
-};
-
-
-template<typename F>
-struct result_of_call {
-protected:
-	struct _Tag;
-
-	static substitution_failure _check(...);					// cannnot call F(...)
-
-	template<typename...X>
-	static auto _check(_Tag*,X...x) -> decltype(std::declval<F>()(x...));// can call F(...)
-public:
-	template<typename...X>
-		using type = decltype( _Check_result_of_call<result_of_call,X...>::check() );
-public:
-	using func_t = F;
-	template<typename...X>
-	static auto check() -> decltype(  _Check_result_of_call<result_of_call,X...>::check() );
-};
-
-template<typename F,typename...X>
-using result_of_call_t = typename result_of_call<F>::template type<X...>;
-
-
-template<typename F,typename...X>
-struct is_callable : substitution_succeeded<typename result_of_call<F>::template type<X...>> { };
-
-template<typename F,typename...X>
-constexpr bool is_callable_v() { return is_callable<F,X...>::value; }
-
-
-template<typename F>
-struct has_callable : substitution_succeeded<typename result_of_call<F>::template type<>> { };
-
-template<typename F,typename...X>
-struct has_callable<F(X...)> : substitution_succeeded<typename result_of_call<F>::template type<X...>> { };
+struct basetype_is_polymorphic
+    : std::is_polymorphic<remove_pointer_or_reference_t<T>> { };
 
 
 
 /*--------------------------------------------------------------------------
-	utils
+    utils
 */
-	template <typename F, size_t Depth, typename IndexArray, typename TI, size_t R=Depth>
-	struct __Foreach_cartesian {
-		static
-		void go(IndexArray &a, F f, const IndexArray &uppers, const IndexArray &lowers) {
-			TI end = uppers[Depth-R];
-			for(TI i=lowers[Depth-R]; i<end ;++i) {
-				a[Depth-R] = i;
-				__Foreach_cartesian<F,Depth,IndexArray,TI,R-1>::go(a, f, uppers, lowers);
-			}
-		}
-	};
 
-	template <typename F, size_t Depth, typename IndexArray, typename TI>
-	struct __Foreach_cartesian<F,Depth,IndexArray,TI,1> {
-		static
-		void go(IndexArray &a, F f, const IndexArray &uppers, const IndexArray &lowers) {
-			TI end = uppers[Depth-1];
-			for(TI i=lowers[Depth-1]; i<end ;++i) {
-				a[Depth-1] = i;
-				f(a);
-			}
-		}
-	};
+template <typename F, size_t Depth, typename IndexArray, typename TI, size_t R=Depth>
+struct __Foreach_cartesian {
+    static
+    void go(IndexArray &a, F f, const IndexArray &uppers, const IndexArray &lowers) {
+        TI end = uppers[Depth-R];
+        for(TI i=lowers[Depth-R]; i<end ;++i) {
+            a[Depth-R] = i;
+            __Foreach_cartesian<F,Depth,IndexArray,TI,R-1>::go(a, f, uppers, lowers);
+        }
+    }
+};
 
-	//------------------------------------------------------------
-	template <size_t Depth, typename TI=int, typename F>	//u,l,f
-	void foreach_cartesian(const std::array<TI,Depth> &_uppers, const std::array<TI,Depth> &_lowers, F f) {
-		std::array<TI,Depth> a;
-		__Foreach_cartesian<F,Depth,decltype(a), TI>::go(a, f, _uppers,_lowers);
-	}
-	template <size_t Depth, typename TI=int, typename F>	//max,l,f
-	void foreach_cartesian(TI max, const std::array<TI,Depth> &lowers, F f) {
-		std::array<TI,Depth> uppers;
-		uppers.fill(max);
+template <typename F, size_t Depth, typename IndexArray, typename TI>
+struct __Foreach_cartesian<F,Depth,IndexArray,TI,1> {
+    static
+    void go(IndexArray &a, F f, const IndexArray &uppers, const IndexArray &lowers) {
+        TI end = uppers[Depth-1];
+        for(TI i=lowers[Depth-1]; i<end ;++i) {
+            a[Depth-1] = i;
+            f(a);
+        }
+    }
+};
 
-		foreach_cartesian(uppers, lowers, f);
-	}
-	template <size_t Depth, typename TI=int, typename F>	//U,f
-	void foreach_cartesian(const std::array<TI,Depth> &uppers, F f) {
-		foreach_cartesian(uppers, std::array<TI,Depth>{0,}, f);
-	}
-	template <size_t Depth, typename TI=int, typename F>	//max,f
-	void foreach_cartesian(TI max, F f) {
-		foreach_cartesian(max, std::array<TI,Depth>{0,}, f);
-	}
-	template <size_t Depth, typename TI=int, typename F>	//max,min, f
-	void foreach_cartesian(TI max, TI min, F f) {
-		std::array<TI,Depth> lowers;
-		lowers.fill(min);
+template <size_t Depth, typename TI=int, typename F>
+void foreach_cartesian(const std::array<TI,Depth> &_uppers, const std::array<TI,Depth> &_lowers, F f) {
+    std::array<TI,Depth> a;
+    __Foreach_cartesian<F,Depth,decltype(a), TI>::go(a, f, _uppers,_lowers);
+}
 
-		foreach_cartesian(max, lowers, f);
-	}
-	template <size_t Depth, typename TI=int, typename F>	//U,min, f
-	void foreach_cartesian(const std::array<TI,Depth> &uppers, TI min, F f) {
-		std::array<TI,Depth> lowers;
-		lowers.fill(min);
+template <size_t Depth, typename TI=int, typename F>
+void foreach_cartesian(TI max, const std::array<TI,Depth> &lowers, F f) {
+    std::array<TI,Depth> uppers;
+    uppers.fill(max);
 
-		foreach_cartesian(uppers, lowers, f);
-	}
+    foreach_cartesian(uppers, lowers, f);
+}
 
+template <size_t Depth, typename TI=int, typename F>
+void foreach_cartesian(const std::array<TI,Depth> &uppers, F f) {
+    foreach_cartesian(uppers, std::array<TI,Depth>{0,}, f);
+}
 
+template <size_t Depth, typename TI=int, typename F>
+void foreach_cartesian(TI max, F f) {
+    foreach_cartesian(max, std::array<TI,Depth>{0,}, f);
+}
+
+template <size_t Depth, typename TI=int, typename F>
+void foreach_cartesian(TI max, TI min, F f) {
+    std::array<TI,Depth> lowers;
+    lowers.fill(min);
+
+    foreach_cartesian(max, lowers, f);
+}
+
+template <size_t Depth, typename TI=int, typename F>
+void foreach_cartesian(const std::array<TI,Depth> &uppers, TI min, F f) {
+    std::array<TI,Depth> lowers;
+    lowers.fill(min);
+
+    foreach_cartesian(uppers, lowers, f);
+}
 
 /*//////////////////////////////////////////////////////////////////////////////////////////////
-	tuple utils
+    tuple utils
 */
+//iseq<1,2,3...>
+template <int...Ti>
+using iseq = std::integer_sequence<int,Ti...>;
 
-/*---------------------------------------------------------------------------------------------
-	select_from_sequence<k, 1,2,3,4...>::value
-*/
-	template<int K, int...I>  struct select_from_sequence;
+template<typename...T>
+struct iseq_cat;
 
-	template<int K, int I0, int...I>
-	struct select_from_sequence<K, I0,I...> : select_from_sequence<K-1,I...> { };
+template<int...Ti, int...Ui>
+struct iseq_cat<iseq<Ti...>, iseq<Ui...>> {
+    using type = iseq<Ti...,Ui...>;
+};
+template<typename T,typename U,typename...Rs>
+struct iseq_cat<T,U,Rs...> {
+    using type = typename iseq_cat<typename iseq_cat<T,U>::type, Rs...>::type;
+};
+template<int...Ti>
+struct iseq_cat<iseq<Ti...>> {
+    using type = iseq<Ti...>;
+};
 
-	template<int I0, int... I>
-	struct select_from_sequence<0, I0, I...> {
-		enum { value=I0 };
-	};
+template<>
+struct iseq_cat<> {
+    using type = iseq<>;
+};
 
-	template<int K, int...I>
-	constexpr auto select_from_sequence_v = select_from_sequence<K,I...>::value;
-
-
-/*---------------------------------------------------------------------------------------------
-	reverse sequences:
-		integer_rsequence<-1,-3,1...>::type
-		integer_rsequence_t<-1,2,3...>
-		_reverse_integer_sequence( integer_sequence<int,1,3,7...>);
-		make_index_rsequence<int N>
-*/
-	template<typename T, T...I> 
-	struct integer_rsequence {
-		template<size_t...J>
-			using _indexed_rsequence = std::integer_sequence<T, select_from_sequence<sizeof...(J)-J-1,I...>::value...   >;
-
-		template<size_t...J>
-		static constexpr
-		auto _index_to_rsequence(std::index_sequence<J...> j) {
-			return _indexed_rsequence<J...>{};
-		}
-		using type = decltype( _index_to_rsequence(std::make_index_sequence<sizeof...(I)>{}) );
-	};
-	template<typename T, T...I>
-	using integer_rsequence_t = typename integer_rsequence<T,I...>::type;
-
-	template<typename T, T...I>
-	constexpr auto _reverse_integer_sequence(std::integer_sequence<T,I...>) {
-		return integer_rsequence_t<T,I...>{};
-	}
-	template<size_t N>
-	using make_index_rsequence = decltype(_reverse_integer_sequence( std::make_index_sequence<N>{} ));
-
-	template<size_t...I>
-	using index_rsequence = integer_rsequence_t<size_t,I...>;
+template<typename...T>
+using iseq_cat_t = typename iseq_cat<T...>::type;
 
 
-/*---------------------------------------------------------------------------------------------
-	make_integer_sequence_NxI<int, 10,-1>
-	make_index_sequence_NxI<10,1>
-*/
-		template<typename T, size_t N, size_t I, typename Seq>
-		struct __make_integer_sequence_NxI;
 
-		template<typename T, size_t N,size_t I, size_t...J>
-		struct __make_integer_sequence_NxI<T,N,I,std::index_sequence<J...>> {
-			using type = std::integer_sequence<T,(I+J-J)...>;
-		};
-
-	template<typename T, size_t N, size_t I>
-	using make_integer_sequence_NxI = typename __make_integer_sequence_NxI<T,N,I,std::make_index_sequence<N>>::type;
-
-	template<size_t N, size_t I>
-	using make_index_sequence_NxI = typename __make_integer_sequence_NxI<size_t,N,I,std::make_index_sequence<N>>::type;
-
-
-/*---------------------------------------------------------------------------------------------
-	iseq<1,2,3>
-	iseq_cat_t<iseq<1,2,3>, iseq<4,5,6>>
-	iseq_add_t<iseq<1,2,3>, -1,-2,1,2>
-*/
-
-	template <int...Ti>
-	using iseq = std::integer_sequence<int,Ti...>;
-
-
-	template<typename...T>
-	struct iseq_cat;
-
-	template<int...Ti, int...Ui>
-	struct iseq_cat<iseq<Ti...>, iseq<Ui...>> {
-		using type = iseq<Ti...,Ui...>;
-	};
-	template<typename T,typename U,typename...Rs>
-	struct iseq_cat<T,U,Rs...> {
-		using type = typename iseq_cat<typename iseq_cat<T,U>::type, Rs...>::type;
-	};
-	template<int...Ti>
-	struct iseq_cat<iseq<Ti...>> {
-		using type = iseq<Ti...>;
-	};
-	template<>
-	struct iseq_cat<> {
-		using type = iseq<>;
-	};
-	template<typename...T>
-	using iseq_cat_t = typename iseq_cat<T...>::type;
-
-//iseq_add_t<iseq<1,2,3>,11,22,33>
-		template<typename T, int...I>
-		struct iseq_add;
-		template<int...Ti, int...Ui>
-		struct iseq_add<iseq<Ti...>, Ui...> {
-			using type = iseq<Ti...,Ui...>;
-		};
-	template<typename T, int...U>
-	using iseq_add_t = typename iseq_add<T,U...>::type;
-
-
-/*---------------------------------------------------------------------------------------------
-	iseq_indexOf<1,iseq<1,2,3>, true/false>
-*/
-	namespace __vane_helper__ {
-		template <int X, typename T, bool _assert_=true>
-		struct __iseq_indexOf;
-
-		template <bool _assert_, int X, int...I>
-		struct __iseq_indexOf<X,iseq<X,I...>, _assert_> : std::integral_constant<int, 0> { };
-
-		template <bool _assert_, int X, int Y, int...I>
-		struct __iseq_indexOf<X,iseq<Y,I...>, _assert_>
-			: std::integral_constant<int, (0<=__iseq_indexOf<X,iseq<I...>,_assert_>::value)
-										?  1 + __iseq_indexOf<X,iseq<I...>,_assert_>::value
-										: -1
-									> { };
-		template <int X>
-		struct __iseq_indexOf<X,iseq<>, false> : std::integral_constant<int, -1> { };
-	}
-
-	template <int X, typename T, bool _assert_=true>
-	constexpr int iseq_indexOf = __vane_helper__::__iseq_indexOf<X,T,_assert_>::value; 
+template<typename T, int...I>
+struct iseq_add;
+template<int...Ti, int...Ui>
+struct iseq_add<iseq<Ti...>, Ui...> {
+    using type = iseq<Ti...,Ui...>;
+};
+template<typename T, int...U>
+using iseq_add_t = typename iseq_add<T,U...>::type;
 
 
 
 /*---------------------------------------------------------------------------------------------
-	iseq_at<3,iseq<0,1,2,3>>
+    iseq_indexOf
 */
-		template <size_t I, typename Seq>
-		struct __iseq_at;
+namespace __vane_helper__ {
+    template <int X, typename T, bool _assert_=true>
+    struct __iseq_indexOf;
 
-		template <size_t I, int S, int...Ss>
-		struct __iseq_at<I, iseq<S,Ss...>>
-			: std::integral_constant<int, __iseq_at<I-1, iseq<Ss...>>::value> { };
+    template <bool _assert_, int X, int...I>
+    struct __iseq_indexOf<X,iseq<X,I...>, _assert_> : std::integral_constant<int, 0> { };
 
-		template <int S, int...Ss>
-		struct __iseq_at<0, iseq<S,Ss...>>
-			: std::integral_constant<int, S> { };
+    template <bool _assert_, int X, int Y, int...I>
+    struct __iseq_indexOf<X,iseq<Y,I...>, _assert_>
+        : std::integral_constant<int, (0<=__iseq_indexOf<X,iseq<I...>,_assert_>::value)
+                                    ?  1 + __iseq_indexOf<X,iseq<I...>,_assert_>::value
+                                    : -1
+                                > { };
+    template <int X>
+    struct __iseq_indexOf<X,iseq<>, false> : std::integral_constant<int, -1> { };
+}
 
-	template <size_t I, typename Seq>
-	constexpr int iseq_at = __iseq_at<I,Seq>::value;
+template <int X, typename T, bool _assert_=true>
+constexpr int iseq_indexOf = __vane_helper__::__iseq_indexOf<X,T,_assert_>::value; 
 
+/*---------------------------------------------------------------------------------------------
+    iseq_at<3,iseq<0,1,2,3>>
+*/
+template <size_t I, typename Seq>
+struct __iseq_at;
+
+template <size_t I, int S, int...Ss>
+struct __iseq_at<I, iseq<S,Ss...>>
+    : std::integral_constant<int, __iseq_at<I-1, iseq<Ss...>>::value> { };
+
+template <int S, int...Ss>
+struct __iseq_at<0, iseq<S,Ss...>>
+    : std::integral_constant<int, S> { };
+
+template <size_t I, typename Seq>
+constexpr int iseq_at = __iseq_at<I,Seq>::value;
 
 
 /*---------------------------------------------------------------------------------------------
-	iseq_size< iseq<...> >
+    __T_value_v<T,int,3>    ;--> T::value or (int)3
 */
-#if 1	//XXX: use iseq<...>::size() instead
-		template <typename Seq>
-		struct __iseq_size;
-		template <int...I>
-		struct __iseq_size<iseq<I...>> : std::integral_constant<size_t, sizeof...(I)> {};
-	template <typename Seq>
-	constexpr size_t iseq_size = __iseq_size<Seq>::value;
-#endif
+template<typename T, typename V, V val, typename=void_v<V>>
+struct __T_value : std::integral_constant<V,val> {};
+
+template< typename T, typename V, V val>
+struct __T_value<T,V,val, void_v<V,T::value>> : std::integral_constant<decltype(T::value),T::value> {};
+
+template<typename T, typename V, V val>
+constexpr auto __T_value_v = __T_value<T,V,val>::value;
+
+/*---------------------------------------------------------------------------------------------
+    __T_map_t<T, void>  ;--> typename T::map or void
+*/
+template<typename T, typename X, typename=__void_t<X>>
+struct __T_map { using map = X; };
+
+template< typename T, typename X>
+struct __T_map<T,X,__void_t<typename T::map>> { using map = typename T::map; };
+
+template<typename T, typename X>
+using __T_map_t = typename __T_map<T,X>::map;
 
 
 /*---------------------------------------------------------------------------------------------
-	__T_value_v<T,int,3>	;--> T::value or (int)3
+    __T_type_t<T, void> ;--> typename T::map or void
 */
-			template<typename T, typename V, V val, typename=void_v<V>>
-			struct __T_value : std::integral_constant<V,val> {};
+template<typename T, typename X, typename=__void_t<X>>
+struct __T_type { using map = X; };
 
-			template< typename T, typename V, V val>
-			struct __T_value<T,V,val, void_v<V,T::value>> : std::integral_constant<decltype(T::value),T::value> {};
+template< typename T, typename X>
+struct __T_type<T,X,__void_t<typename T::map>> { using map = typename T::map; };
 
-		template<typename T, typename V, V val>
-		constexpr auto __T_value_v = __T_value<T,V,val>::value;
+template<typename T, typename X>
+using __T_type_t = typename __T_type<T,X>::map;
 
 
 /*---------------------------------------------------------------------------------------------
-	__T_map_t<T, void>	;--> typename T::map or void
+    iseq_map<ISeq, filter, params...>
 */
-		template<typename T, typename X, typename=__void_t<X>>
-		struct __T_map { using map = X; };
+template<typename ISeq, template<int SI, size_t I, typename _ISeq, typename...Params> class Filter, typename Indexer=std::make_index_sequence<ISeq::size()>, typename...FilterParam>
+struct __iseq_map;
 
-		template< typename T, typename X>
-		struct __T_map<T,X,__void_t<typename T::map>> { using map = typename T::map; };
+template<typename ISeq, template<int SI, size_t I, typename _ISeq, typename...Params> class Filter, typename...FilterParam, size_t...I>
+struct __iseq_map<ISeq, Filter, std::index_sequence<I...>, FilterParam...> {
+    using type = iseq_cat_t<
+        typename std::conditional<
+            __T_value_v< Filter<iseq_at<I,ISeq>,I,ISeq,FilterParam...>,  bool, true>,
+            __T_map_t < Filter<iseq_at<I,ISeq>,I,ISeq,FilterParam...>,  iseq<iseq_at<I,ISeq>> >,
+            iseq<>
+        >::type...
+    >;
+    using complement = iseq_cat_t<
+        typename std::conditional<
+            __T_value_v< Filter<iseq_at<I,ISeq>,I,ISeq,FilterParam...>,  bool, true>,
+            iseq<>,
+            __T_map_t < Filter<iseq_at<I,ISeq>,I,ISeq,FilterParam...>,  iseq<iseq_at<I,ISeq>> >
+        >::type...
+    >;
+};
 
-	template<typename T, typename X>
-	using __T_map_t = typename __T_map<T,X>::map;
+template<typename ISeq, template<int SI, size_t I, typename _ISeq, typename...Params> class Filter, typename...FilterParam>
+using iseq_map = typename __iseq_map<ISeq, Filter, std::make_index_sequence<ISeq::size()>, FilterParam...>::type;
+
+template<typename ISeq, template<int SI, size_t I, typename _ISeq, typename...Params> class Filter, typename...FilterParam>
+using iseq_map2 = __iseq_map<ISeq, Filter, std::make_index_sequence<ISeq::size()>, FilterParam...>;
+
+/*---------------------------------------------------------------------------------------------
+    iseq_andAll<1,2,3>
+    iseq_orAll<1,2,3>
+*/
+template<typename T>
+struct __iseq_andAll;
+
+template<int...I>
+struct __iseq_andAll<iseq<I...>> 
+    : std::__and_<  std::integral_constant<bool, (bool)I>... > { };
+
+template<typename T>
+constexpr bool iseq_andAll = __iseq_andAll<T>::value;
+
+
+template<typename T>
+struct __iseq_orAll;
+
+template<int...I>
+struct __iseq_orAll<iseq<I...>> 
+    : std::__or_<  std::integral_constant<bool, (bool)I>... > { };
+
+template<typename T>
+constexpr bool iseq_orAll = __iseq_orAll<T>::value;
 
 
 /*---------------------------------------------------------------------------------------------
-	__T_type_t<T, void>	;--> typename T::map or void
+    iseq_sum<1,2,3>
 */
-		template<typename T, typename X, typename=__void_t<X>>
-		struct __T_type { using map = X; };
+template<typename T>
+struct iseq_sum;
 
-		template< typename T, typename X>
-		struct __T_type<T,X,__void_t<typename T::map>> { using map = typename T::map; };
+template<int I, int...J>
+struct iseq_sum<iseq<I,J...>> 
+    : std::integral_constant<int, I + iseq_sum<iseq<J...>>::value > { };
 
-	template<typename T, typename X>
-	using __T_type_t = typename __T_type<T,X>::map;
+template<int I>
+struct iseq_sum<iseq<I>> 
+    : std::integral_constant<int, I> { };
 
-
-
-/*---------------------------------------------------------------------------------------------
-	iseq_map<ISeq, filter, params...>
-*/
-	template<typename ISeq, template<int SI, size_t I, typename _ISeq, typename...Params> class Filter, typename Indexer=std::make_index_sequence<iseq_size<ISeq>>, typename...FilterParam>
-	struct __iseq_map;
-
-	template<typename ISeq, template<int SI, size_t I, typename _ISeq, typename...Params> class Filter, typename...FilterParam, size_t...I>
-	struct __iseq_map<ISeq, Filter, std::index_sequence<I...>, FilterParam...> {
-		using type = iseq_cat_t<
-			typename std::conditional<
-				__T_value_v< Filter<iseq_at<I,ISeq>,I,ISeq,FilterParam...>,  bool, true>,
-				__T_map_t < Filter<iseq_at<I,ISeq>,I,ISeq,FilterParam...>,  iseq<iseq_at<I,ISeq>> >,
-				iseq<>
-			>::type...
-		>;
-		using complement = iseq_cat_t<
-			typename std::conditional<
-				__T_value_v< Filter<iseq_at<I,ISeq>,I,ISeq,FilterParam...>,  bool, true>,
-				iseq<>,
-				__T_map_t < Filter<iseq_at<I,ISeq>,I,ISeq,FilterParam...>,  iseq<iseq_at<I,ISeq>> > //iseq<iseq_at<I,ISeq>>
-			>::type...
-		>;
-	};
-
-	template<typename ISeq, template<int SI, size_t I, typename _ISeq, typename...Params> class Filter, typename...FilterParam>
-	using iseq_map = typename __iseq_map<ISeq, Filter, std::make_index_sequence<iseq_size<ISeq>>, FilterParam...>::type;
-
-	template<typename ISeq, template<int SI, size_t I, typename _ISeq, typename...Params> class Filter, typename...FilterParam>
-	using iseq_map2 = __iseq_map<ISeq, Filter, std::make_index_sequence<iseq_size<ISeq>>, FilterParam...>;
-
-/*---------------------------------------------------------------------------------------------
-	iseq_selectAt<iseq<0,1,2,3>, 1,3>	--> iseq<1,3>
-	iseq_selectAt<iseq<0,1,2,3>>		--> iseq<>
-	iseq_omitAt<iseq<0,1,2,3>, 1,3>	--> iseq<0,2>
-	iseq_omitAt<iseq<0,1,2,3>>		--> iseq<0,1,2,3>
-*/
-		template <bool select, typename Seq, typename SiSeq, size_t...K>
-		struct __iseq_selectAt;
-
-		template <bool select, int...Si, int...I, size_t...K>
-		struct __iseq_selectAt<select,iseq<Si...>, iseq<I...>, K...> {
-			using type =iseq_cat_t<
-							std::conditional_t<
-								(0>iseq_indexOf<I,iseq<K...>,false>),
-								std::conditional_t<select, iseq<>, iseq<Si>>,
-								std::conditional_t<select, iseq<Si>, iseq<>>
-							>...
-						>;
-		};
-		template <bool select, int...I, size_t...K>
-		struct __iseq_selectAt<select,iseq<>, iseq<I...>, K...> {
-			using type =iseq<>;
-		};
-	template <typename Seq, size_t...K>
-		using iseq_selectAt = typename __iseq_selectAt<true,Seq, std::make_integer_sequence<int,iseq_size<Seq>>,K...>::type;
-	template <typename Seq, size_t...K>
-		using iseq_omitAt = typename __iseq_selectAt<false,Seq, std::make_integer_sequence<int,iseq_size<Seq>>,K...>::type;
-
-/*---------------------------------------------------------------------------------------------
-	iseq_andAll<1,2,3>
-	iseq_orAll<1,2,3>
-*/
-			template<typename T>
-			struct __iseq_andAll;
-
-			template<int...I>
-			struct __iseq_andAll<iseq<I...>> 
-				: __and_<  std::integral_constant<bool, (bool)I>... > { };
-
-	template<typename T>
-	constexpr bool iseq_andAll = __iseq_andAll<T>::value;
-
-
-			template<typename T>
-			struct __iseq_orAll;
-
-			template<int...I>
-			struct __iseq_orAll<iseq<I...>> 
-				: __or_<  std::integral_constant<bool, (bool)I>... > { };
-
-	template<typename T>
-	constexpr bool iseq_orAll = __iseq_orAll<T>::value;
-
-
-/*---------------------------------------------------------------------------------------------
-	iseq_sum<1,2,3>
-*/
-	template<typename T>
-	struct iseq_sum;
-
-	template<int I, int...J>
-	struct iseq_sum<iseq<I,J...>> 
-		: std::integral_constant<int, I + iseq_sum<iseq<J...>>::value > { };
-
-	template<int I>
-	struct iseq_sum<iseq<I>> 
-		: std::integral_constant<int, I> { };
 template<typename T>
 constexpr int iseq_sum_v = iseq_sum<T>::value;
 
 /*---------------------------------------------------------------------------------------------
-	iseq_max<1,2,3>::value
-	iseq_min<1,2,3>::value
+    iseq_max<1,2,3>::value
+    iseq_min<1,2,3>::value
 */
-	template<typename T>
-	struct iseq_max;
+template<typename T>
+struct iseq_max;
 
-	template<int I, int...J>
-	struct iseq_max<iseq<I,J...>> 
-		: std::integral_constant<int,  (I > iseq_max<iseq<J...>>::value) ? I : iseq_max<iseq<J...>>::value> { };
+template<int I, int...J>
+struct iseq_max<iseq<I,J...>> 
+    : std::integral_constant<int,  (I > iseq_max<iseq<J...>>::value) ? I : iseq_max<iseq<J...>>::value> { };
 
-	template<int I>
-	struct iseq_max<iseq<I>> 
-		: std::integral_constant<int, I> { };
+template<int I>
+struct iseq_max<iseq<I>> 
+    : std::integral_constant<int, I> { };
 template<typename T>
 constexpr int iseq_max_v = iseq_max<T>::value;
 
-	template<typename T>
-	struct iseq_min;
+template<typename T>
+struct iseq_min;
 
-	template<int I, int...J>
-	struct iseq_min<iseq<I,J...>> 
-		: std::integral_constant<int,  (I < iseq_min<iseq<J...>>::value) ? I : iseq_min<iseq<J...>>::value> { };
+template<int I, int...J>
+struct iseq_min<iseq<I,J...>> 
+    : std::integral_constant<int,  (I < iseq_min<iseq<J...>>::value) ? I : iseq_min<iseq<J...>>::value> { };
 
-	template<int I>
-	struct iseq_min<iseq<I>> 
-		: std::integral_constant<int, I> { };
+template<int I>
+struct iseq_min<iseq<I>> 
+    : std::integral_constant<int, I> { };
+
 template<typename T>
 constexpr int iseq_min_v = iseq_min<T>::value;
 
+
 /*---------------------------------------------------------------------------------------------
-	iseq_n<cnt, value>
+    iseq_n<cnt, value>
 */
-	template<int Value, typename T>
-	struct __iseq_n;
+template<int Value, typename T>
+struct __iseq_n;
 
-	template<int Value, size_t...I>
-	struct __iseq_n<Value, std::index_sequence<I...>> {
-		using type = iseq<(I+Value-I)... >;
-	};
+template<int Value, size_t...I>
+struct __iseq_n<Value, std::index_sequence<I...>> {
+    using type = iseq<(((int)I-(int)I)+Value)... >;
+};
 
-	template<int N, int Value>
-	using iseq_n = typename __iseq_n<Value, std::make_index_sequence<N>>::type;
+template<int N, int Value>
+using iseq_n = typename __iseq_n<Value, std::make_index_sequence<N>>::type;
 
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////
-//#include <tuple>
+
 /*---------------------------------------------------------------------------------------------
-	reverse_tuple_t<Types...>
+    tuple_index<T, tuple<...>, _assert_=true>
 */
-			//helpers
-			namespace __helpers__ {
-				template <typename T>
-				struct Reverse_tuple {
-					using type = T;
-				};
+template <class T, class typelist, bool _assert_=true>
+struct ___tuple_index;
 
-				template <typename T, typename...Rest>
-				struct Reverse_tuple<std::tuple<T,Rest...>>  {
-					using type = decltype(tuple_cat(std::declval<typename Reverse_tuple<std::tuple<Rest...>>::type>(), std::declval<std::tuple<T>>()));
-				};
-			}
-	template <typename T>
-	using reverse_tuple_t = typename __helpers__::Reverse_tuple<T>::type;
+template <bool _assert_, class T, class...Types>
+struct ___tuple_index<T, std::tuple<T, Types...>, _assert_> {
+    enum { value = 0 };
+};
+
+template <class T>
+struct ___tuple_index<T, std::tuple<>, false> {
+    enum { value = -1 };
+};
+
+template <class T, class U, class... Types, bool _assert_>
+struct ___tuple_index<T, std::tuple<U, Types...>, _assert_> :
+    std::conditional< 
+        0<=___tuple_index<T, std::tuple<Types...>, _assert_>::value,
+        std::integral_constant<int,1+___tuple_index<T, std::tuple<Types...>, _assert_>::value>,
+        std::integral_constant<int,-1>
+    >::type
+{ };
+
+template<typename T,typename List, bool _assert_=true, int _default_=-1>
+struct _tuple_index {
+    enum { _value = ___tuple_index<T,List, _assert_>::value };
+    static constexpr int
+        value = std::conditional_t<
+            _value >= 0,
+            std::integral_constant<int,_value>,
+            std::integral_constant<int,_default_>
+        >::value;
+};
+
+template<typename T,typename List, bool _assert_=true, int _default_=-1>
+constexpr int tuple_index = _tuple_index<T,List, _assert_,_default_>::value;
+
+
 /*---------------------------------------------------------------------------------------------
-	tuple_foreach	//ref: tuple-foreach.cc
-		foreach(tupleData, tupleFuntions, FArgs...fargs);
-			_foreach<1,2...>(tupleData, tupleFuntions, FArgs...fargs);
-			_foreach(tupleData, tupleFuntions, index_sequence<1,3...>,FArgs...fargs);
-
-		foreach<F>(tupleData, FArgs...fargs);
-			_foreach<F,1,3...>(tupleData, FArgs...fargs);
-			_foreach<F>(tupleData, index_sequence<1,3...>,FArgs...fargs);
+    tuple_count_v
 */
-#ifndef	__clang__
-				template<typename T,typename F, size_t...I, typename...FArgs>
-				void ___foreach(T &&t, F &&f, std::index_sequence<I...>&&, FArgs...fargs) {
-					std::tie((std::get<I>(f)(std::get<I>(t),fargs...),std::ignore)...);
-				};
-#endif
-				//	_foreach( tuple, F[], <1,2..>,args...)	;helper
-				template<typename T,typename F, size_t...I, typename...FArgs>
-				void _foreach(T &&t, F &&f, std::index_sequence<I...>&& seq, FArgs...fargs) {
-#ifdef	__clang__
-					std::tie((std::get<I>(f)(std::get<I>(t),fargs...),std::ignore)...);
-#else
-					___foreach(t, f, _reverse_integer_sequence(seq), fargs...);
-#endif
-				};
-	//	_foreach<1,2..>( tuple, F[], args...)
-	template<size_t I0,size_t...I, typename T, typename F, typename...FArgs>
-	void _foreach(T &&t, F &&f, FArgs...fargs) {
-			_foreach(t, f, std::index_sequence<I0,I...>{}, fargs...);
-	};
-	//	foreach( tuple, F[], args...)
-	template<typename T, typename F, typename...FArgs>
-	void foreach(T &&t, F &&f, FArgs...fargs) {
-		_foreach(t, f, std::make_index_sequence<std::tuple_size<typename std::remove_reference<T>::type>::value>{}, fargs...);
-	};
+template <typename X, typename T>
+struct __tuple_count;
+
+template <typename X>
+struct __tuple_count<X, std::tuple<>> : std::integral_constant<int, 0> { };
+
+template <typename X, typename T, typename...U>
+struct __tuple_count<X, std::tuple<T,U...>>
+    : std::integral_constant<int, (std::is_same<T,X>::value ? 1 : 0) + __tuple_count<X,std::tuple<U...>>::value > { };
+
+template <typename X, typename Tuple>
+constexpr int tuple_count_v = __tuple_count<X,Tuple>::value;
+
+/*---------------------------------------------------------------------------------------------
+    tuple_n<N,T>
+*/
+namespace __vane_helper__ {
+    template <typename T, typename U>
+        struct __tuple_n;
+    template <typename T, size_t...I>
+        struct __tuple_n<T, std::integer_sequence<long unsigned,I...>> {
+            using type = std::tuple< typename std::conditional<(I>=0),T,void>::type...   >;
+        };
+};
+
+template <int N, typename T>
+using tuple_n = typename __vane_helper__::__tuple_n<T, std::make_index_sequence<N>>::type;
+
+/*---------------------------------------------------------------------------------------------
+    tuple_cat_t<tuple<...>, tuple<...>, tuple<...>>
+    tuple_cat_t<tuple<...> >
+*/
+template<typename...T>
+struct __tuple_cat_helper;
+
+template<typename...T>
+struct __tuple_cat_helper<std::tuple<T...>> {
+    using type = std::tuple<T...>;
+};
+
+template<typename...Ts, typename...Us>
+struct __tuple_cat_helper<std::tuple<Ts...>, std::tuple<Us...>> {
+    using type = std::tuple<Ts...,Us...>;
+};
+
+template<typename T, typename U, typename...Rest>
+struct __tuple_cat_helper<T,U,Rest...> {
+    using type = typename __tuple_cat_helper<typename __tuple_cat_helper<T,U>::type, Rest...>::type;
+};
+
+template<>
+struct __tuple_cat_helper<> {
+    using type = std::tuple<>;
+};
+
+template<typename...T>
+    using tuple_cat_t = typename __tuple_cat_helper<T...>::type;
+
+template<typename Set>
+struct __tuple_catInner;
+
+template<typename...T>
+struct __tuple_catInner<std::tuple<T...>> {
+    using type = tuple_cat_t<T...>;
+};
+
+template <typename...T>
+using tuple_catInner = typename __tuple_catInner<T...>::type;
+
+template <typename...T>
+struct tuple_add;
+
+template <typename...T, typename...U>
+struct tuple_add<std::tuple<T...>,U...> {
+    using type = tuple_cat_t<std::tuple<T...>, std::tuple<U>...>;
+};
+
+template <typename...T>
+using tuple_add_t = typename tuple_add<T...>::type;
+
+
+/*---------------------------------------------------------------------------------------------
+    tuple_uniq_t
+*/
+template <typename T, typename Sum=std::tuple<>>
+struct __tuple_uniq;
+
+template <typename...S>
+struct __tuple_uniq<std::tuple<>,std::tuple<S...>> {
+    using type = std::tuple<S...>;
+};
+
+template <typename T,typename...Ts, typename...S>
+struct __tuple_uniq<std::tuple<T,Ts...>,std::tuple<S...>> {
+    using type = typename __tuple_uniq<
+        std::tuple<Ts...>,
+        typename std::conditional<
+            (0>tuple_index<T,std::tuple<S...>,false>), std::tuple<S...,T>, std::tuple<S...>
+        >::type
+    >::type;
+};
+
+template <typename T>
+using tuple_uniq_t = typename __tuple_uniq<T>::type;
+
+
+
+/*---------------------------------------------------------------------------------------------
+    type_map
+*/
+template<typename Tuple, template<typename,size_t,typename,typename...> class Filter, typename Seq=std::make_index_sequence<std::tuple_size<Tuple>::value>, typename...FilterParam>
+struct __type_map;
+
+template<typename Tuple, template<typename,size_t,typename,typename...> class Filter, typename...FilterParam, size_t...I>
+struct __type_map<Tuple, Filter, std::index_sequence<I...>, FilterParam...> {
+    using type = tuple_cat_t<
+        typename std::conditional<
+            __T_value_v<Filter<std::tuple_element_t<I,Tuple>,I,Tuple,FilterParam...>,  bool, true>,
+            __T_map_t  <Filter<std::tuple_element_t<I,Tuple>,I,Tuple,FilterParam...>,  std::tuple<typename std::tuple_element<I,Tuple>::type>>,
+            std::tuple<>
+        >::type...
+    >;
+    using complement = tuple_cat_t<
+        typename std::conditional<
+            __T_value_v<Filter<std::tuple_element_t<I,Tuple>,I,Tuple,FilterParam...>,  bool, true>,
+            std::tuple<>,
+            std::tuple<std::tuple_element_t<I,Tuple>>
+        >::type...
+    >;
+};
+
+template<typename Tuple, template<typename,size_t,typename,typename...> class Filter,typename...FilterParam>
+using type_map = typename __type_map<Tuple,Filter,std::make_index_sequence<std::tuple_size<Tuple>::value>,FilterParam...>::type;
+
+template<typename Tuple, template<typename,size_t,typename,typename...> class Filter,typename...FilterParam>
+using type_map2 = __type_map<Tuple,Filter,std::make_index_sequence<std::tuple_size<Tuple>::value>,FilterParam...>;
+
+
+/*---------------------------------------------------------------------------------------------
+    type_mapv
+
+*/
+template<typename Tuple, template<typename,size_t,typename,typename...> class Mapper, typename Seq=std::make_index_sequence<std::tuple_size<Tuple>::value>, typename...FilterParam>
+struct __type_mapv;
+
+template<typename Tuple, template<typename,size_t,typename,typename...> class Mapper, typename...FilterParam, size_t...I>
+struct __type_mapv<Tuple, Mapper, std::index_sequence<I...>, FilterParam...> {
+    using type = iseq_cat_t<
+        __T_map_t  <
+            Mapper<std::tuple_element_t<I,Tuple>,I,Tuple,FilterParam...>,
+            iseq< __T_value_v< Mapper< std::tuple_element_t<I,Tuple>,I,Tuple,FilterParam...>, int, 0> >
+        >...
+    >;
+};
+
+template<typename Tuple, template<typename,size_t,typename,typename...> class Mapper,typename...FilterParam>
+using type_mapv = typename __type_mapv<Tuple,Mapper,std::make_index_sequence<std::tuple_size<Tuple>::value>,FilterParam...>::type;
+
+
+/*---------------------------------------------------------------------------------------------
+    tuple_all_of
+    tuple_any_of
+*/
+template<typename T,template<typename,size_t,typename,typename...>class Filter, typename...Param>
+struct __tuple_all_of;
+
+template<template<typename,size_t,typename,typename...>class Filter, typename...T, typename...Param>
+struct __tuple_all_of<std::tuple<T...>,Filter,Param...>
+    : std::integral_constant<bool, sizeof...(T)==std::tuple_size< type_map< std::tuple<T...>, Filter, Param... > >::value > { };
+
+template<typename T,template<typename,size_t,typename,typename...>class Filter, typename...Param>
+constexpr bool tuple_all_of = __tuple_all_of<T,Filter,Param...>::value;
+
+template<typename T,template<typename,size_t,typename,typename...>class Filter, typename...Param>
+struct __tuple_any_of;
+
+template<template<typename,size_t,typename,typename...>class Filter, typename...T, typename...Param>
+struct __tuple_any_of<std::tuple<T...>,Filter,Param...>
+    : std::integral_constant<bool, !!std::tuple_size< type_map< std::tuple<T...>, Filter, Param... > >::value > { };
+
+template<typename T,template<typename,size_t,typename,typename...>class Filter, typename...Param>
+constexpr bool tuple_any_of = __tuple_any_of<T,Filter,Param...>::value;
+
+
+/*---------------------------------------------------------------------------------------------
+    iseq_any_of
+*/
+template<typename S,template<int,size_t,typename,typename...>class Filter, typename...Param>
+struct __iseq_any_of;
+
+template<template<int,size_t,typename,typename...>class Filter, int...I, typename...Param>
+struct __iseq_any_of<iseq<I...>,Filter,Param...>
+    : std::integral_constant<bool, !!iseq_map<iseq<I...>, Filter, Param...>::size() > { };
+
+template<typename S,template<int,size_t,typename,typename...>class Filter, typename...Param>
+constexpr bool iseq_any_of = __iseq_any_of<S,Filter,Param...>::value;
+
+template<typename S,template<int,size_t,typename,typename...>class Filter, typename...Param>
+struct __iseq_all_of;
+
+template<template<int,size_t,typename,typename...>class Filter, int...I, typename...Param>
+struct __iseq_all_of<iseq<I...>,Filter,Param...>
+    : std::integral_constant<bool, sizeof...(I)==iseq_map< iseq<I...>, Filter, Param... >::size() > { };
+
+template<typename S,template<int,size_t,typename,typename...>class Filter, typename...Param>
+constexpr bool iseq_all_of = __iseq_all_of<S,Filter,Param...>::value;
+
+
+/*---------------------------------------------------------------------------------------------
+*/
+namespace iseq_filters
+{
+    template<int Si, size_t I, typename ISeq, typename Tuples>
+    struct map_tuple_size
+        { using map = iseq< std::tuple_size<std::tuple_element_t<I,Tuples>>::value >; };
+
+    template<int SI, size_t I, typename ISeq>
+    struct map_nonZero_into_index   { using map = iseq< SI ? I : 0>; };
+
+
+    template<int SI, size_t I, typename ISeq>
+    struct filter_nonZero_into_index : std::integral_constant<bool, !!SI> { using map = iseq<I>; };
+
+    template<int SI, size_t I, typename ISeq, typename V>
+    struct filter_value_into_index : std::integral_constant<bool, SI==V::value> { using map = iseq<I>; };
+
+    template<int SI, size_t I, typename ISeq>
+    struct filter_ge0_into_index : std::integral_constant<bool, SI>=0 > { using map = iseq<I>; };
+
+    template<int SI, size_t I, typename ISeq>
+    struct map_not
+        { using map = iseq< !SI >; };
+
+    template<int SI, size_t I, typename ISeq>
+    struct map_inverse
+        { using map = iseq< iseq_indexOf<I,ISeq> >; };
+
+    template<typename EI, size_t I, typename Tuple, typename Ref, typename _assert_=std::false_type, typename _default_=std::integral_constant<int,-1>>
+    struct map_index {
+        using map = iseq< tuple_index<EI,Ref,_assert_::value, _default_::value> >;
+    };
+}
+
+
+    template<typename Tuples>
+    using tuple_sizes = iseq_map<std::make_integer_sequence<int,std::tuple_size<Tuples>::value>, iseq_filters::map_tuple_size, Tuples>;
+
+    template<typename ISeq>
+    using iseq_inverse = iseq_map<ISeq, iseq_filters::map_inverse>;
+
+
+    template<typename ISeq, int D>
+    struct iseq_inc;
+
+    template<int...I, int D>
+    struct iseq_inc<iseq<I...>,D> {
+        using type = iseq<(I+D)...>;
+    };
+
+    template<typename ISeq, int S>
+    struct iseq_scale;
+
+    template<int...I, int S>
+    struct iseq_scale<iseq<I...>,S> {
+        using type = iseq<(I*S)...>;
+    };
+
+    template<typename SeqA, typename SeqB>
+    struct iseq_plus;
+
+    template<int...I, int...J>
+    struct iseq_plus<iseq<I...>,iseq<J...>> {
+        using type = iseq<(I+J)...>;
+    };
+
+
+    template<typename SeqA, typename SeqB>
+    struct iseq_mul;
+
+    template<int...I, int...J>
+    struct iseq_mul<iseq<I...>,iseq<J...>> {
+        using type = iseq<(I*J)...>;
+    };
+
+
+    template<typename SeqA, typename SeqB>
+    struct iseq_div;
+
+    template<int...I, int...J>
+    struct iseq_div<iseq<I...>,iseq<J...>> {
+        using type = iseq<(I/J)...>;
+    };
+
+
+    template<typename ISeq, typename G=iseq<0>, int S=0>
+    struct _ISeq_partial_sum;
+
+    template<int I0, int...I, typename G>
+    struct _ISeq_partial_sum<iseq<I0, I...>, G> {
+        using next = _ISeq_partial_sum<iseq<I...>, iseq_add_t<G, iseq_at<G::size()-1,G>+I0>>;
+        using type = typename next::type;
+    };
+
+    template<typename G>
+    struct _ISeq_partial_sum<iseq<>, G> {
+        using type = G;
+    };
+
+
+
+
+/*---------------------------------------------------------------------------------------------
+    predefined type_filters:
+*/
+namespace type_filters {
+    template<typename T, size_t I, typename Tuple, typename D>
+    struct is_base_of: std::is_base_of<T,D> { };
+
+    template<typename T, size_t I, typename Tuple, typename B>
+    struct is_sub_of : std::is_base_of<B,T> { };
+
+    template<typename T, size_t I, typename Tuple, typename X>
+    struct is_same: std::is_same<T,X> { };
+
+    template<typename T, size_t I, typename Tuple, typename X>
+    struct is_not_same: std::integral_constant<bool, !std::is_same<T,X>::value > { };
+
+    template<typename T, size_t I, typename Tuple, typename D>
+    struct basetype_is_base_of: vane::basetype_is_base_of<T,D> { };
+
+    template<typename T, size_t I, typename Tuple, typename B>
+    struct basetype_is_derived_from: vane::basetype_is_base_of<B,T> { };
+
+    template<typename T, size_t I, typename Tuple>
+    struct is_pointer: std::is_pointer<T> { };
+
+    template <typename T, size_t I, typename Tuple, typename List>
+    struct is_topbase_of
+        : std::integral_constant<bool, ! tuple_any_of<type_map<List, type_filters::is_not_same, T>, type_filters::is_base_of,T>> { };
+}
+
+template<typename T, typename D>
+struct __is_base_of_all;
+
+template<typename T, typename...D>
+struct __is_base_of_all<T,std::tuple<D...>>
+    : std::integral_constant<bool, tuple_all_of<std::tuple<D...>,type_filters::is_sub_of, T> > { };
+
+template<typename T>
+struct __is_base_of_all<T,std::tuple<>>;
+
+template<typename T, typename D>
+constexpr bool is_base_of_all = __is_base_of_all<T,D>::value;
+
+//-------------------------------------------------------------------------
+template<typename T, typename B>
+struct __is_derived_of_all;
+
+template<typename T>
+struct __is_derived_of_all<T,std::tuple<>>;
+
+template<typename T, typename...B>
+struct __is_derived_of_all<T,std::tuple<B...>>
+    : std::integral_constant<bool, tuple_all_of<std::tuple<B...>,type_filters::is_base_of, T> > { };
+
+template<typename T, typename B>
+constexpr bool is_derived_of_all = __is_derived_of_all<T,B>::value;
+
+namespace type_filters {
+    template<typename T, size_t I, typename, typename TypeList>
+    struct is_base_of_all: vane::__is_base_of_all<T, TypeList> { };
+
+    template<typename T, size_t I, typename, typename TypeList>
+    struct is_derived_of_all: std::integral_constant<bool, vane::is_derived_of_all<T, TypeList> > { };
+
+    template<typename T, size_t I, typename, typename List>
+    struct is_base_of_all_at : 
+        std::integral_constant<bool, vane::is_base_of_all<T, std::tuple_element_t<I,List>>> { };
+}
+
+
+/*----------------------------------------------------------------
+    remove_const<T> :       const T *   --> T
+*/
+    template<typename T>
+    struct remove_const  {
+        using type =
+            std::conditional_t  < std::is_pointer<T>::value,            std::add_pointer_t<std::remove_const_t<std::remove_pointer_t<T>>>,
+            std::conditional_t  < std::is_lvalue_reference<T>::value,   std::remove_const_t<std::remove_reference_t<T>> &,
+            std::conditional_t  < std::is_rvalue_reference<T>::value,   std::remove_const_t<std::remove_reference_t<T>> &&,
+                                                                        std::remove_const_t<T>
+            >>>;
+    };
+    template<typename T>
+    using remove_const_t = typename remove_const<T>::type;
+
+
+/*----------------------------------------------------------------
+    type_filters
+*/
+namespace type_filters {
+    template<typename T, size_t I, typename Tuple, typename N>
+    struct skipN : std::integral_constant<bool, (int(I)>= N::value) > { };
+
+    template<typename T, size_t I, typename Tuple>
+    struct map_tuple_wrapped { using map = std::tuple< std::tuple<T> >; };
+
+    template<typename X, size_t I, typename T>
+    struct map_add_pointer
+        { using map = std::tuple<std::add_pointer_t<X>>; };
+
+    template<typename Tuple, size_t I, typename>
+    struct map_add_pointers
+        { using map = std::tuple< type_map<Tuple, map_add_pointer> >;   };
+
+    template<typename X, size_t I, typename T>
+    struct map_add_reference
+        { using map = std::tuple<X&>; };
+
+    template<typename X, size_t I, typename T>
+    struct map_add_rvalue_reference
+        { using map = std::tuple<std::add_rvalue_reference_t<X>>; };
+
+    template<typename X, size_t I, typename T>
+    struct map_remove_pointer
+        { using map = std::tuple<std::remove_pointer_t<X>>; };
+
+    template<typename X, size_t I, typename T>
+    struct map_remove_reference
+        { using map = std::tuple<std::remove_reference_t<X>>; };
+
+    template<typename X, size_t I, typename T>
+    struct map_remove_const
+        { using map = std::tuple<remove_const_t<X>>; };
+
+    template<typename X, size_t I, typename T>
+    struct map_remove_pointer_or_reverence {
+        using map = std::tuple< remove_pointer_or_reference_t<X> >;
+    };
+
+    template <typename X, size_t I, typename T, typename S, typename E>
+    struct is_index_in_range;
+
+    template <typename X, size_t I, typename T, int S, int E>
+    struct is_index_in_range<X,I,T,std::integral_constant<int,S>, std::integral_constant<int,E>>
+        : std::integral_constant<bool, (S<=I) && (I<E)> { };
+
+    template<typename X, size_t I, typename>
+    struct map_tuple_size {
+        using map = iseq<std::tuple_size<X>::value>; 
+    };
+
+    template<typename T, size_t, typename, typename List, typename inclusive=std::false_type>
+    struct map_subclasses
+    {
+        using map = std::tuple<type_map<
+                std::conditional_t<inclusive::value,
+                    List,
+                    type_map<List, type_filters::is_not_same, T>
+                >,
+                type_filters::is_sub_of,
+                T
+            >>;
+    };
+}
+
+template<typename T, int N>
+using tuple_skip_n = type_map<T, type_filters::skipN, std::integral_constant<int, N>>;
+
+//add_xxx ///////////////////////////////////////////////////////////////////////////
+template<typename Tuple>
+using add_pointers = type_map<Tuple, type_filters::map_add_pointer>;
+
+template<typename TT>
+using add_pointers_nested = type_map<TT, type_filters::map_add_pointers >;
+
+
+template<typename Tuple>
+using add_references = type_map<Tuple, type_filters::map_add_reference>;
+
+template<typename Tuple>
+using add_rvalue_references = type_map<Tuple, type_filters::map_add_rvalue_reference>;
+
+//remove_xxx
+template<typename Tuple>
+using remove_pointers = type_map<Tuple, type_filters::map_remove_pointer>;
+
+template<typename Tuple>
+using remove_references = type_map<Tuple, type_filters::map_remove_reference>;
+
+template<typename Tuple>
+using remove_consts = type_map<Tuple, type_filters::map_remove_const>;
+
+template<typename Tuple>
+using remove_pointers_or_references = type_map<Tuple, type_filters::map_remove_pointer_or_reverence>;
+
+
+/*---------------------------------------------------------------------------------------------
+tuple_elements
+*/
+template<typename Seq, typename Tuple>
+struct __helper_tuple_elements;
+
+template<size_t...I, typename Tuple>
+struct __helper_tuple_elements<std::index_sequence<I...>, Tuple> {
+    using type = std::tuple<typename std::tuple_element<I, Tuple>::type...>;
+};
+template<int...I, typename Tuple>
+struct __helper_tuple_elements<std::integer_sequence<int,I...>, Tuple> {
+    using type = std::tuple<typename std::tuple_element<I, Tuple>::type...>;
+};
+
+template<typename Seq, typename Tuple>
+using tuple_elements = typename __helper_tuple_elements<Seq,Tuple>::type;
+
+
+
+/*---------------------------------------------------------------------------------------------
+    tuple_sizes<Domains>
+*/
+template<typename Tuples>
+using tuples_sizes = type_mapv<Tuples, type_filters::map_tuple_size>;
+
+/*---------------------------------------------------------------------------------------------
+    linear_sizeof_tuples<Domains>
+*/
+    template<typename Tuples>
+    constexpr auto linear_sizeof_tuples = iseq_sum_v<tuples_sizes<Tuples>>;
+
+
+/*--------------------------------------------------------------------------------------
+    make_array(...)
+*/
+template<typename...T>
+constexpr
+auto make_array(T...args) {
+    using _T = typename std::common_type<typename std::__decay_and_strip<T>::__type...>::type;
+    return std::array<_T,sizeof...(T)>{std::forward<_T>(args)...};
+}
+
+/*--------------------------------------------------------------------------------------
+    make_array<iseq>
+*/
+template<typename ET=int, ET...I>
+constexpr auto __helper_make_array(std::integer_sequence<ET,I...>) {
+    return std::array<ET,sizeof...(I)>{ I... };
+}
+
+template<typename ISeq>
+constexpr auto make_array() {
+    return __helper_make_array(ISeq());
+}
+
+/*--------------------------------------------------------------------------------------
+    make_array<ET,iseq>
+*/
+template<typename ET, typename IT=int, IT...I>
+constexpr auto __helper_make_array(ET, std::integer_sequence<IT,I...>) {
+    return std::array<ET,sizeof...(I)>{ ET(I)... };
+}
+
+template<typename ET, typename ISeq>
+constexpr auto make_array() {
+    return __helper_make_array<ET>(ET(), ISeq());
+}
+
+
+/*-----------------------------------------------------------
+    stacked_allocator
+    gstack
+*/
+
+//exception
+struct invalid_stack_marker : std::runtime_error {
+    invalid_stack_marker(const char *m="invalid stack marker") : runtime_error(m) {}
+
+    static void __throw() __noinline {
+        throw invalid_stack_marker();
+    }
+};
+
+
+template <class __T>
+inline 
+void __destroy_at(__T *p) {
+    p->~__T();
+}
+
+
+
+template <class __T>
+inline
+std::enable_if_t<std::is_trivially_destructible<__T>::value>
+__destroy(__T *first, __T *last) { }
+
+template <class __T>
+inline __noinline
+std::enable_if_t<!std::is_trivially_destructible<__T>::value>
+__destroy(__T *first, __T *last) {
+    for(; first < last ;++first)
+        __destroy_at( first );
+}
+
+
+
+template<typename __T, typename=void>
+struct __sa_destroy_at
+{
+    void operator()(std::remove_extent_t<__T> *p) const {
+        p->~__T();
+    }
+};
+
+template<typename __T>
+struct __sa_destroy_at<__T, std::enable_if_t<std::is_trivially_destructible<std::remove_extent_t<__T>>::value>>
+{
+    void operator()(std::remove_extent_t<__T> *p) const { }
+};
+
+
+template<typename __T>
+struct __sa_destroy_array
+{
+    void operator()(std::remove_extent_t<__T> *p) const {
+        assert( p );
+        assert( ((unsigned*)p)[-1] );
+
+        __destroy(p, p + ((unsigned*)p)[-1]);
+    }
+};
+
+
+
+template<size_t __I=0, typename __UT=unsigned int>
+class stacked_allocator
+{
+    stacked_allocator(const stacked_allocator&) = delete;
+    stacked_allocator(stacked_allocator&&) = delete;
+    stacked_allocator &operator=(const stacked_allocator&) = delete;
+    stacked_allocator &operator=(stacked_allocator&&) = delete;
+protected:
+    using slot = std::vector<__UT>;
+
+public:
+    using unit_type = __UT;
+    using stack_mark = std::array<unsigned,2>;
+
+
+    stacked_allocator() {
+        _slots.resize(1);
+        _cur = _slots.begin();
+    }
+
+    void *allocate(unsigned size)
+    {
+        if( size == 0 ) return nullptr;
+
+        size = (size + sizeof(__UT)-1) / sizeof(__UT);
+        if( size > _cur->capacity() - _cur->size() ) {
+
+            unsigned sum = _extra_size;
+            _extra_size = 0;
+            for(auto i=_cur+1; i < _slots.end() ;++i)
+                sum += i->capacity();
+            sum = sum < size ? size : sum;
+
+            _slots.resize( _cur - _slots.begin() + (_cur->size() ? 2 : 1));
+            _cur = _slots.end() - 1;
+
+            _cur->resize(0);
+            _cur->reserve(sum);
+        }
+
+        auto old_top = _cur->size();
+        _cur->resize( old_top + size );
+
+        return &(*_cur)[old_top];
+    }
+
+    void *allocate_n(unsigned n, unsigned size)
+    {
+        auto size_data = n*size;
+        if( size_data==0 ) return nullptr;
+
+        size_data = (size_data + sizeof(__UT)-1) / sizeof(__UT) * sizeof(__UT);
+        constexpr auto size_n = (sizeof(n) + sizeof(__UT)-1) / sizeof(__UT) * sizeof(__UT);
+
+        char *data = (char*)allocate( size_n + size_data ) + size_n;
+        ((unsigned*)data)[-1] = n;
+
+        return data;
+    }
+
+    void reclaim( stack_mark top )
+    {
+        const auto &to_cur = top[0];
+        const auto &to_top = top[1];
+        const auto icur = _cur - _slots.begin();
+
+        if( to_cur > icur ) {
+            assert( to_cur <= icur );
+            invalid_stack_marker::__throw();
+        }
+        else if( to_cur < icur ) {
+            _cur = _slots.begin() + to_cur;
+        }
+
+        if( to_top > _cur->size() ) {
+            assert( to_top <= _cur->size() );
+            invalid_stack_marker::__throw();
+        }
+
+        if ( to_top==0 && _cur != _slots.end()-1 ){
+            _extra_size += _cur->capacity();
+            slot().swap(*_cur);
+        }
+        else
+            _cur->resize(to_top);
+    }
+
+    stack_mark top() {
+        assert( _cur - _slots.begin() <= std::numeric_limits<unsigned>::max() );
+        assert( _cur->size()          <= std::numeric_limits<unsigned>::max() );
+        return stack_mark{(unsigned)(_cur - _slots.begin()), (unsigned)_cur->size()};
+    }
+
+    void reserve(unsigned size) {
+        auto mark = top();
+        allocate(size);
+        reclaim( mark );
+    }
+    
+public:
+    template<typename T, typename...Args>
+    typename std::enable_if_t<!std::is_array<T>::value || std::extent<T>::value, std::unique_ptr<T,__sa_destroy_at<T>>>
+    alloc(Args&&...args) {
+        return std::unique_ptr<T,__sa_destroy_at<T>>(new(allocate(sizeof(T))) T{std::forward<Args>(args)...});
+    }
+
+    template<typename T>
+    typename std::enable_if_t<!std::is_trivially_destructible<std::remove_extent_t<T>>::value && std::is_array<T>::value && std::extent<T>::value==0, std::unique_ptr<T,__sa_destroy_array<T>>>
+    alloc(unsigned n) {
+        using TT = std::remove_extent_t<T>;
+        return std::unique_ptr<T,__sa_destroy_array<T>>(new(allocate_n(n, sizeof(TT))) TT[n]);
+    }
+
+    template<typename T>
+    typename std::enable_if_t<std::is_trivially_destructible<std::remove_extent_t<T>>::value && std::is_array<T>::value && std::extent<T>::value==0, std::unique_ptr<T,__sa_destroy_at<T>>>
+    alloc(unsigned n) {
+        using TT = std::remove_extent_t<T>;
+        return std::unique_ptr<T,__sa_destroy_at<T>>(new(allocate(n*sizeof(TT))) TT[n]);
+    }
+
+
+    template<typename T, typename...Args>
+    typename std::enable_if_t<!std::is_trivially_destructible<std::remove_extent_t<T>>::value && std::is_array<T>::value && std::extent<T>::value==0, std::unique_ptr<T,__sa_destroy_array<T>>>
+    make_array(Args&&...args) {
+        using TT = std::remove_extent_t<T>;
+        constexpr auto n = sizeof...(Args);
+        return std::unique_ptr<T,__sa_destroy_array<T>>(new(allocate_n(n, sizeof(TT))) TT[n]{std::forward<Args>(args)...});
+    }
+
+    template<typename T, typename...Args>
+    typename std::enable_if_t<std::is_trivially_destructible<std::remove_extent_t<T>>::value && std::is_array<T>::value && std::extent<T>::value==0, std::unique_ptr<T,__sa_destroy_at<T>>>
+    make_array(Args&&...args) {
+        using TT = std::remove_extent_t<T>;
+        constexpr auto n = sizeof...(Args);
+        return std::unique_ptr<T,__sa_destroy_at<T>>(new(allocate(n*sizeof(TT))) TT[n]{std::forward<Args>(args)...});
+    }
+
+
+    static stacked_allocator    &get_instance() { return __instance; };
+
+protected:
+    typename std::vector<slot>::iterator    _cur;
+    std::vector<slot>                       _slots;
+
+private:
+    unsigned                    _extra_size = 0;
+    static stacked_allocator    __instance;
+};
+
+template<size_t __I, typename __UT>
+stacked_allocator<__I,__UT>
+stacked_allocator<__I,__UT>::__instance;
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////
+template<size_t __I=0, typename __UT=unsigned int>
+class gstack
+{
+    gstack(const gstack&) = delete;
+    gstack(gstack&&) = delete;
+    gstack &operator=(const gstack&) = delete;
+    gstack &operator=(gstack&&) = delete;
+
+public:
+    gstack() : _mark( get_allocator().top() ) { }
+
+    ~gstack() {
+        get_allocator().reclaim( _mark );
+    }
+
+    void *allocate(unsigned size) {
+        return get_allocator().allocate(size);
+    }
+
+    void reserve(unsigned size) {
+        return get_allocator().reserve(size);
+    }
+
+
+    template<typename T, typename...Args>
+    auto
+    alloc(Args&&...args) {
+        return get_allocator().template alloc<T>(std::forward<Args>(args)...);
+    }
+
+    template<typename T, typename...Args>
+    auto
+    make_array(Args&&...args) {
+        return get_allocator().template make_array<T>(std::forward<Args>(args)...);
+    }
+
+    static auto &get_allocator() {
+        return stacked_allocator<__I,__UT>::get_instance();
+    }
+
+
+protected:
+    std::array<unsigned,2>  _mark;
+};
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+template<typename __T>
+class gstack_allocator
+{
+public:
+    using size_type         = size_t;
+    using difference_type   = ptrdiff_t;
+    using pointer           = __T*;
+    using const_pointer     = const __T*;
+    using reference         = __T&;
+    using const_reference   = const __T&;
+    using value_type        = __T;
+
+    template<typename __T1>
+    struct rebind
+    { typedef gstack_allocator<__T1> other; };
+
+    gstack_allocator() noexcept { }
+    gstack_allocator(const gstack_allocator&) noexcept { }
+    ~gstack_allocator() noexcept { }
+
+    template<typename __T1>
+    gstack_allocator(const gstack_allocator<__T1>&) noexcept{ }
+
+
+
+    __T *allocate(size_t n, const void *p = 0)
+    {
+        return static_cast<__T*>(__get_stacked_allocator().allocate(n * sizeof(__T)));
+    }
+
+    void deallocate(__T *p, size_t n) { }
+
+protected:
+    static auto &__get_stacked_allocator() {
+        return stacked_allocator<>::get_instance();
+    }
+
+};
+
+template<typename __T>
+inline
+bool operator==(const gstack_allocator<__T>&, const gstack_allocator<__T>&)
+{ return true; }
+
+template<typename __T>
+inline 
+bool operator!=(const gstack_allocator<__T>&, const gstack_allocator<__T>&)
+{ return false; }
+
+
+
+/*---------------------------------------------------------------------
+    back_inserter
+*/
+
+template<typename _Container>
+class back_insert_iterator;
+
+
+template<typename __T>
+class back_insert_iterator<__T*>
+    : public std::iterator<std::output_iterator_tag, void, void, void, void>
+{
+protected:
+    __T *&container;
+
+public:
+    explicit
+    back_insert_iterator(__T *&__x) : container(__x) { }
+
+    back_insert_iterator&
+    operator=(const __T &__value)
+    {
+        *this->container++ = __value;
+        return *this;
+    }
+
+    back_insert_iterator&
+    operator=(__T &&__value)
+    {
+        *this->container++ = std::move(__value);
+        return *this;
+    }
+
+    back_insert_iterator&
+    operator*() { return *this; }
+
+    back_insert_iterator&
+    operator++() { return *this; }
+
+    back_insert_iterator
+    operator++(int) { return *this; }
+};
+
+
+template<typename _Container>
+inline back_insert_iterator<_Container>
+back_inserter(_Container& __x)
+{ return back_insert_iterator<_Container>(__x); }
+
+
+
+
+
+
+template<typename _Container>
+class ptr_back_insert_iterator;
+
+
+template<typename __T>
+class ptr_back_insert_iterator<__T**>
+    : public std::iterator<std::output_iterator_tag, void, void, void, void>
+{
+protected:
+    __T **&container;
+
+public:
+    explicit
+    ptr_back_insert_iterator(__T **&__x) : container(__x) { }
+
+    ptr_back_insert_iterator&
+    operator=(const __T &__value)
+    {
+        *this->container++ = &__value;
+        return *this;
+    }
+
+
+    ptr_back_insert_iterator&
+    operator*() { return *this; }
+
+    ptr_back_insert_iterator&
+    operator++() { return *this; }
+
+    ptr_back_insert_iterator
+    operator++(int) { return *this; }
+};
+
+
+template<typename _Container>
+inline ptr_back_insert_iterator<_Container>
+pointer_back_inserter(_Container& __x)
+{ return ptr_back_insert_iterator<_Container>(__x); }
+
+
+
+
+
+/*-------------------------------------------------------
+    topology_sort
+    topological_sort
+*/
+template<typename List>
+class topological_sort
+{
+    template <typename T,size_t,typename>
+    struct map_sort { using map = typename topological_sort<T>::type_duped; };
+
+    template<typename T, size_t, typename>
+    struct map_subs {
+        using map = std::tuple<type_map<type_map<List, type_filters::is_not_same, T>, type_filters::is_sub_of, T>>;
+    };
+
+    using topbases = type_map<List, type_filters::is_topbase_of, List>;
+    using type_duped = tuple_cat_t<topbases, type_map<type_map<topbases, map_subs>, map_sort>>;
+
+    template<typename L>
+    friend class topological_sort;
+public:
+    using type = tuple_uniq_t<type_duped>;
+    static constexpr bool isMI = !std::is_same< type, type_duped>::value;
+};
+
+
+/*---------------------------------------------------------------------
+    class_tree
+*/
+namespace class_tree {///////////////////////////////
+
+struct TypeInfoEntry {
+    const void *(*cast)(const void*);
+//  const std::type_info *type_info;
+};
+template<typename To,typename From>
+const void *__dynamic_cast(const void *p) {
+    return dynamic_cast<const To*>(static_cast<const From*>(p));
+}
+
+template<typename TypeList, typename Base>
+struct typeInfo_list;
+
+template<typename Base, typename...T>
+class typeInfo_list<std::tuple<T...>,Base> {
+    static const std::array<const TypeInfoEntry, std::tuple_size<std::tuple<T...>>::value> __list;
+public:
+    static const std::array<const TypeInfoEntry, std::tuple_size<std::tuple<T...>>::value> &get() {
+        return __list;
+    }
+};
+
+template<typename Base, typename...T>
+const std::array<const TypeInfoEntry, std::tuple_size<std::tuple<T...>>::value> typeInfo_list<std::tuple<T...>,Base>::__list 
+  = { TypeInfoEntry{
+        &__dynamic_cast<T,Base>
+        //&typeid(T)
+      }...
+  };
+}// namespace class_tree/////////////////////////////
+
+
+/*---------------------------------------------------------------------
+    mf_ggard    
+*/
+namespace vane_detail {///////////////////////////////////////////////////////////////////////
+
+    template <typename T=void>
+    struct __mf_global_varg_guard {
+        static bool __init;
+        static bool init() { return true; }
+    };
+
+    template <typename T>
+    bool __mf_global_varg_guard<T>::__init;
+
+
+
+    template<typename __VID=int>
+    struct __MFCache {
+        __MFCache() = delete;
+
+        static void   set_vid(int *v)   { __vid = v; }
+        static __VID &get_vid(int i)    {
+            assert( __vid );
+            return __vid[i];
+        }
+
+
+    private:
+        static __VID *__vid;
+    };
+
+    template<typename __VID>
+    __VID *__MFCache<__VID>::__vid;
+
+    struct _MF_init
+    {
+        using initor_type = std::function<void()>;
+
+        static auto &get_initors() {
+            static std::vector<initor_type>  __initors;
+            return __initors;
+        }
+
+        static void init()
+        {
+            vane_detail::__mf_global_varg_guard<>::__init = true;
+
+            for(auto f : get_initors() )
+                f();
+        }
+
+        static void add_initor(initor_type f) { get_initors().push_back(f); }
+    };
+
+}//end-namespace vane_detail //////////////////////////////////////////////////////////////////
+
+
+
+inline void mf_init() {
+    vane_detail::_MF_init::init();
+}
+
+
+template<typename T, typename F>
+constexpr
+ptrdiff_t cast_diff() {
+    return (ptrdiff_t)static_cast<T>((F)1) - 1;
+}
+
+template<typename T, typename F, typename E>
+constexpr
+ptrdiff_t cast_diff() {
+    return (ptrdiff_t)static_cast<T>(static_cast<F>((E)1)) - 1;
+}
+
+
+
+/*---------------------------------------------------------------------
+    vtype
+*/
+
+struct vtype
+{
+    using vtypeid_type  = int;
+
+    vtype(vtypeid_type id) : _vtypeid(id) { __check_mf_init(); }
+
+    virtual ~vtype() = 0;
+
+    vtypeid_type vtypeid() const { return _vtypeid; }
+
+
+public:
+    vtypeid_type    _vtypeid;
+
+
+    static
+    void __check_mf_init() {
+        if( ! vane_detail::__mf_global_varg_guard<>::__init ) {
+            __exit();
+        }
+    }
+private:
+    static
+    void __exit() {
+        fputs("\n\nERROR: vane::mf_init() is not called.\n\tterminating the program...\n\n", stderr);
+        exit(1);
+    }
+};
+
+inline vtype::~vtype() {}
+
+
+template<typename T>
+struct is_vtype : std::is_base_of<vtype,T> {};
+
+template<typename T>
+bool is_vtype_v = is_vtype<T>::value;
+
+
+
+/*---------------------------------------------------------------------
+    drtti -- domained RTTI
+*/
+
+template<typename Domains>
+struct _Extents_domains {
+    static const std::array<int,std::tuple_size<Domains>::value>  __extents;
+};
+    template<typename Domains>
+    const std::array<int,std::tuple_size<Domains>::value>  _Extents_domains<Domains>::__extents = make_array<tuples_sizes<Domains>>();
+
+template<typename Domains>
+const auto &domains_sizes() {
+    return _Extents_domains<Domains>::__extents;
+}
+
+
+
+
+#pragma pack(push,1)
+template<typename ET=bool>
+class drtti_table : __varray2d<ET>
+{
+    drtti_table() = delete;
+    drtti_table(const drtti_table&) = delete;
+    drtti_table(drtti_table&&) = delete;
+    drtti_table &operator =(const drtti_table&) = delete;
+    drtti_table &operator =(drtti_table&&) = delete;
+public:
+
+    constexpr drtti_table(int size) { this->_size = size; }
+
+    using __varray2d<ET>::operator[];
+    using __varray2d<ET>::size;
+    using __varray2d<ET>::data;
+
+    ET operator()(int i, int j) const {
+        return (*this)[i][j];
+    }
+};
+#pragma pack(pop)
+
+
+
+
+template<typename Iter, typename Comp=std::less<typename std::iterator_traits<Iter>::value_type>>
+Iter max_elements(Iter first, Iter last, Comp comp = Comp())
+{
+    if( first >= last ) return first;
+
+    Iter head = first;
+    Iter tail = first;
+    for(; ++first != last ;) {
+        if( comp(*head, *first) )
+            std::swap( *(tail=head), *first);
+        else if( !comp(*first, *head) )
+            std::swap(*++tail, *first);
+    }
+    return tail + 1;
+}
+
+
+template<typename Col, typename Comp=std::less< decltype(std::declval<Col>()[0])>>
+auto max_elements(Col &col, Comp comp = Comp()) {
+    return max_elements(std::begin(col), std::end(col), comp);
+}
+
+
+template<typename Iter, typename Col, typename Comp=std::less<decltype(*std::declval<Iter>())>>
+Iter max_elements_indexing(Iter first, Iter last, const Col &value, Comp comp=Comp()) {
+    return max_elements(first, last, [&value,comp](auto x, auto y){ return comp(value[x], value[y]); });
+}
+
+template<typename Iter, typename Indices, typename Comp=std::less<decltype(*std::declval<Iter>())>>
+auto max_elements_indexed(Iter first, Iter last, Indices indices, Comp comp=Comp() )
+{
+    auto cnt = last - first;
+    std::iota(indices, indices + cnt, 0);
+
+    return max_elements(indices, indices+cnt, [first,comp](auto i, auto j) { 
+        return comp(first[i], first[j]);
+    });
+}
+
+template<typename Col, typename Indices, typename Comp=std::less<decltype(std::declval<Col>()[0])>>
+auto max_elements_indexed(Col col, Indices indices, Comp comp=Comp())
+{
+    return max_elements_indexed(std::begin(col), std::end(col), indices, comp);
+}
+
+
+
+template<typename Iter1, typename Iter2, typename BinOp>
+int sum_mapxy(Iter1 from, Iter1 to, Iter2 against, BinOp op) {
+    int sum = 0;
+    for(; from != to ; ++from, ++against)
+        sum += op(*from, *against);
+    return sum;
+}
+
+template<typename Col, typename Col2, typename BinOp>
+int sum_mapxy(const Col &x, const Col2 &y, BinOp op) {
+    return sum_mapxy(std::begin(x), std::end(x), std::begin(y), op);
+}
+
+template<typename Col, typename T2, typename BinOp>
+int sum_mapxy(const Col &x, const T2 *y, BinOp op) {
+    return sum_mapxy(std::begin(x), std::end(x), y, op);
+}
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////
+template<typename T>
+struct array_size;
+
+template<typename T, size_t N>
+struct array_size<std::array<T,N>> {
+    enum { value = N };
+};
+
+template<typename T, size_t N>
+struct array_size<T[N]> {
+    enum { value = N };
+};
+
+template<typename T, size_t N>
+constexpr size_t ARRAY_SIZE(const T (&a)[N])                { return N; }
+
+template<typename T, size_t N>
+constexpr size_t ARRAY_SIZE(const std::array<T,N> &a)       { return N; }
+
+template<typename T, size_t N>
+constexpr size_t collection_size(const T (&a)[N])           { return N; }
+
+template<typename T, size_t N>
+constexpr size_t collection_size(const std::array<T,N> &a)  { return N; }
+
+template<typename T>
+constexpr size_t collection_size(const T &a)                { return a.size(); }
+
+
+
+namespace drtti {/////////////////////////////////////////////////////////////////
+
+template<typename TypeList>
+struct _Make_typeid_list;
+
+template<typename...Ts>
+struct _Make_typeid_list<std::tuple<Ts...>>
+{
+    static const std::array<const std::type_info*, sizeof...(Ts)>  __data;
+    static const std::array<const std::type_info*, sizeof...(Ts)>  &get() { return __data; }
+};
+    template<typename...Ts>
+    const std::array<const std::type_info*, sizeof...(Ts)>
+          _Make_typeid_list<std::tuple<Ts...>>::__data= {&typeid(Ts)...};
+
+template<typename TypeList>
+const auto &typeid_list() {
+    return _Make_typeid_list<TypeList>::get();
+}
+
+
+
+template<typename Base, typename Iter, typename Iter2>
+auto typeid_list(Iter first, Iter last, Iter2 list)
+{
+    auto head = list;
+    for(; first < last ;++first, ++list) {
+        assert( *first );
+        *list = &typeid(*static_cast<const Base*>(*first));
+    }
+
+    return head;
+}
+
+template<typename Base, typename Col, typename Col2>
+auto typeid_list(const Col &argv, Col2 &list) {
+    return typeid_list<Base>(std::begin(argv), std::end(argv), std::begin(list));
+}
+
+
+
+template<typename TypeList, typename BaseType, typename=std::conditional_t<is_vtype<BaseType>::value, vtype, void> >
+struct __Make_typeid_list;
+
+template<typename...Ts, typename BaseType>
+struct __Make_typeid_list<std::tuple<Ts...>,BaseType,void>
+{
+    static const std::array<const std::type_info*, sizeof...(Ts)>  __data;
+    static const std::array<const std::type_info*, sizeof...(Ts)>  &get() { return __data; }
+};
+    template<typename...Ts, typename BaseType>
+    const std::array<const std::type_info*, sizeof...(Ts)>
+          __Make_typeid_list<std::tuple<Ts...>,BaseType,void>::__data= {&typeid(Ts)...};
+template<typename...Ts, typename BaseType>
+struct __Make_typeid_list<std::tuple<Ts...>,BaseType,vtype>
+{
+    static const std::array<const std::type_info*, sizeof...(Ts)>  __data;
+    static const std::array<const std::type_info*, sizeof...(Ts)>  &get() { return __data; }
+};
+
+template<typename...Ts, typename BaseType>
+const std::array<const std::type_info*, sizeof...(Ts)>
+      __Make_typeid_list<std::tuple<Ts...>,BaseType,vtype>::__data= {&typeid(typename BaseType::template of<Ts>)...};
+
+
+template<typename TypeList, typename BaseType>
+const auto &_typeid_list() {
+    return __Make_typeid_list<TypeList,BaseType>::get();
+}
+
+template<typename Domains, typename BaseTypes>
+struct _Make_drtti_domains;
+
+template<typename...Ds, typename...Bs>
+struct _Make_drtti_domains<std::tuple<Ds...>, std::tuple<Bs...>>
+{
+    static const std::array<const std::type_info*const*, sizeof...(Ds)>  __data;
+    static const std::array<const std::type_info*const*, sizeof...(Ds)>  &get() { return __data; }
+};
+    template<typename...Ds,typename...Bs>
+    const std::array<const std::type_info*const*, sizeof...(Ds)>
+            _Make_drtti_domains<std::tuple<Ds...>,std::tuple<Bs...>>::__data= {  &_typeid_list<Ds,remove_pointer_or_reference_t<Bs>>()[0]...};
+
+
+template<typename Domains, typename BaseTypes>
+const auto &__drtti_domains() {
+    return _Make_drtti_domains<Domains,BaseTypes>::get();
+}
+
+
+template<typename TypeList, typename Base>
+struct _Make_domain_casters;
+
+template<typename Base, typename...Ts>
+class _Make_domain_casters<std::tuple<Ts...>, Base>
+{
+    template<typename T>
+    static void *dcast(Base *arg ){
+        return dynamic_cast<T*>(arg);
+    }
+public:
+    static const std::array<void*(*)(Base*), sizeof...(Ts)>  __data;
+    static const std::array<void*(*)(Base*), sizeof...(Ts)>  &get() { return __data; }
+};
+    template<typename Base, typename...Ts>
+    const std::array<void*(*)(Base*), sizeof...(Ts)>
+          _Make_domain_casters<std::tuple<Ts...>,Base>::__data= { dcast<Ts>...};
+
+template<typename TypeList, typename Base>
+auto &domain_casters() {
+    return _Make_domain_casters<TypeList,Base>::get();
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+template<typename T=const drtti_table<>>
+struct argv_ismap
+{
+    argv_ismap() = delete;
+    argv_ismap(const argv_ismap&) = delete;
+    argv_ismap(const argv_ismap&&) = delete;
+    argv_ismap &operator =(const argv_ismap&) = delete;
+    argv_ismap &operator =(argv_ismap&&) = delete;
+
+
+
+    using element_type = T;
+    int size() const { return _size; }
+
+    int _size;
+    T *_is_assignable_at[0];
+
+    T &is_assignable_at(int i) const {
+        assert( 0 <= i );
+        assert( i < size() );
+        return *_is_assignable_at[i];
+    }
+
+    template<typename Dst, typename Src>
+    bool _is_assignable(const Dst &dst, const Src &src) const {
+        for(int i=0; i<size(); ++i) {
+            assert( 0 <= dst[i] );  assert( dst[i] < _is_assignable_at[i]->size() );
+            assert( 0 <= src[i] );  assert( src[i] < _is_assignable_at[i]->size() );
+            if( ! (*_is_assignable_at[i])[dst[i]][src[i]] )
+                return false;
+        }
+        return true;
+    }
+    template<typename ET1, size_t SIZE1, typename ET2, size_t SIZE2>
+    bool is_assignable(const std::array<ET1,SIZE1> &dst, const std::array<ET2,SIZE2> &src) const {
+        assert( SIZE1 == size() );
+        assert( SIZE2 == size() );
+        return _is_assignable(dst, src);
+    }
+    template<typename ET1, size_t SIZE1, typename ET2, size_t SIZE2>
+    bool is_assignable(const std::array<ET1,SIZE1> *dst, const std::array<ET2,SIZE2> *src) const {
+        return is_assignable(*dst, *src);
+    }
+
+    template<typename ET1, size_t SIZE1, typename ET2, size_t SIZE2>
+    bool is_assignable(const ET1 (&dst)[SIZE1], const ET2 (&src)[SIZE2]) const {
+        assert( SIZE1 == size() );
+        assert( SIZE2 == size() );
+        return _is_assignable(dst, src);
+    }
+
+    template<typename ET1, typename ET2>
+    bool is_assignable(const ET1 *dst, const ET2 *src) const {
+        return _is_assignable(dst, src);
+    }
+
+    template<typename Dst, typename Src>
+    bool operator()(const Dst &dst, const Src &src) const {
+        return is_assignable(dst, src);
+    }
+};
+
+struct map_is_base_of {
+    template<typename B, typename D>
+    struct mapper {
+        static constexpr bool map() { return std::is_base_of<B,D>::value; }
+    };
+};
+
+}//end-namespace drtti ////////////////////////////////////////////////////////////
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+#pragma pack(push,1)
+template<typename Map, typename Set, typename ET=bool>
+class __drtti_ismap
+{
+            template<typename _Set>
+            struct __Build_data;
+
+            template<typename...Ti>
+            struct __Build_data<std::tuple<Ti...>>
+            {
+                static constexpr int size() { return sizeof...(Ti); }
+
+                template<typename T>
+                struct __Build_row {
+                    static constexpr
+                    std::array<ET,size()> get() {
+                        return { Map::template mapper<T,Ti>::map()... };
+                    }
+                };
+
+                static constexpr
+                multi_array<ET,size(),size()> get() {
+                    return { __Build_row<Ti>::get()... };
+                }
+            };
+
+    __drtti_ismap() = delete;
+public:
+    static constexpr int size() { return std::tuple_size<Set>::value; }
+
+    drtti_table<ET>                 _instance;
+    multi_array<ET, size(),size()>  _data;
+
+    static const __drtti_ismap      __storage;
+    static const drtti_table<ET> &get_instance() { return __storage._instance; }
+    static constexpr multi_array<ET,size(),size()> get_data() { return __Build_data<Set>::get();};
+};
+#pragma pack(pop)
+
+template<typename Map, typename Set, typename ET>
+const
+__drtti_ismap<Map, Set, ET>
+__drtti_ismap<Map, Set, ET>::__storage = {
+    { size() },
+    __Build_data<Set>::get()
+};
+
+
+template<typename Map, typename Set, typename ET=bool>
+const auto &drtti_ismap() {
+    return __drtti_ismap<Map, Set, ET>::get_instance();
+}
+
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-// foreach<F>( tuple, args... )
-	////////with FArgs.../////////////////////////////////////////////////////////////////////
-#ifndef	__clang__
-			template<template<typename...> class F, size_t...I, typename T, typename... FArgs>
-			void ___foreach(T &&t, std::index_sequence<I...>&&, FArgs...fargs) {
-				std::tie(((F<decltype(std::get<I>(t))>{})(std::get<I>(t),fargs...),std::ignore)...);
-			};
-#endif
-			//	_foreach<F>( tuple, <1,2..>, args...)
-			template<template<typename...> class F, size_t...I, typename T, typename... FArgs>
-			void _foreach(T &&t, std::index_sequence<I...>&&seq, FArgs...fargs) {
-#ifdef	__clang__
-				std::tie(((F<decltype(std::get<I>(t))>{})(std::get<I>(t),fargs...),std::ignore)...);
-#else
-				___foreach<F>(t, _reverse_integer_sequence(seq), fargs...);
-#endif
-			};
-	//	_foreach<F, 1,2..>( tuple, args...)
-	template<template<typename...> class F, size_t I0,size_t...I, typename T, typename... FArgs>
-	void _foreach(T &&t, FArgs...fargs) {
-		_foreach<F>(t, std::index_sequence<I0,I...>{}, fargs...);
-	};
-	//	foreach<F>( tuple, args...)
-	template<template<typename...> class F, typename T, typename... FArgs> inline
-	void foreach(T &&t, FArgs...fargs) {
-		_foreach<F>(t, std::make_index_sequence<std::tuple_size<typename std::remove_reference<T>::type>::value>{}, fargs...);
-	};
-///////////////////////////////////////////////////////////////////////////////////////////////
-/*---------------------------------------------------------------------------------------------
-	tuple_index<T, tuple<...>, _assert_=true>
+#pragma pack(push,1)
+template<typename ET, template<typename>class _drtti_table, typename...Domains, typename Mapper>
+struct make_static<drtti::argv_ismap<const _drtti_table<ET>>, std::tuple<Domains...>, Mapper> {
+
+    static const drtti::argv_ismap<_drtti_table<ET>>    &get_instance() { return __storage._instance; }
+    static constexpr int size() { return sizeof...(Domains); }
+
+    drtti::argv_ismap<_drtti_table<ET>> _instance;
+    std::array<const _drtti_table<ET>*, size()> _data;
+
+    static const make_static    __storage;
+
+};
+#pragma pack(pop)
+
+template<typename ET, template<typename>class _drtti_table, typename...Domains, typename Mapper> const
+make_static<drtti::argv_ismap<const _drtti_table<ET>>, std::tuple<Domains...>, Mapper>
+make_static<drtti::argv_ismap<const _drtti_table<ET>>, std::tuple<Domains...>, Mapper>::__storage = {
+    { size(), {}},
+    { &drtti_ismap<Mapper, Domains>()... }
+};
+
+
+
+template<typename Iter, typename IsAssignable>
+Iter reduce_sigs_short(Iter first, Iter last, const IsAssignable &is_assignable)
+{
+    --last;
+    while( first < last ) {
+        for(Iter j=first+1;;) {
+            if( is_assignable(*j, *first) )
+                *j = *last--;
+            else if( is_assignable(*first, *j) ) {
+                *first = *last--;
+                break;
+            }
+            else
+                ++j;
+
+            if( j > last ) {
+                ++first;
+                break;
+            }
+        }
+    }
+
+    return last+1;
+}
+
+template<typename Col, typename IsAssignable>
+auto reduce_sigs_short(Col &sigs, const IsAssignable &is_assignable) {
+return reduce_sigs_short(std::begin(sigs), std::end(sigs), is_assignable);
+}
+
+
+
+template<typename Iter, typename Iter2, typename IsAssignable>
+void reduce_sigs_exhaustive(Iter first, Iter last, Iter2 bag, const IsAssignable &is_assignable) {
+    std::copy_if(first, last, bag, [first,last,&is_assignable](auto x){
+        return ! std::any_of(first,last, [x,&is_assignable](auto y){
+            return x!=y && is_assignable(x, y);
+        });
+    });
+}
+template<typename Col, typename Iter, typename IsAssignable>
+void reduce_sigs_exhaustive(const Col &sigs, Iter bag, const IsAssignable &is_assignable) {
+    reduce_sigs_exhaustive(std::begin(sigs), std::end(sigs), bag, is_assignable);
+}
+
+
+template<typename Domains, typename ArgTypes, typename Iter, typename Castmaps>
+unsigned reduce_sigs(Iter sig_first, Iter sig_last, const Castmaps &castmaps, int castmap_cell_invalid, const std::type_info *arg_tidv[] )
+{
+    using sig_type = std::remove_const_t<std::remove_reference_t<decltype(*sig_first)>>;
+    constexpr auto ARGC = std::tuple_size<Domains>::value;
+
+    gstack<>  gs;
+
+
+    auto &argv_is_assignable = make_static<drtti::argv_ismap<>, Domains, drtti::map_is_base_of>::get_instance();
+    unsigned sigc = sig_last - sig_first;
+    auto  sigs = gs.alloc<const sig_type*[]>(sigc);
+    const sig_type **last = &sigs[0];
+
+    reduce_sigs_exhaustive(sig_first, sig_last, vane::pointer_back_inserter(last), argv_is_assignable);
+
+    sigc = last - &sigs[0];
+    if( 1 < sigc )
+    {
+        using CELL = int;
+        auto buffer       = gs.alloc<CELL[]>(2*sigc);
+        auto sig_matches  = buffer.get();
+        auto indices      = buffer.get() + sigc;
+
+        const auto &rt_domains = drtti::__drtti_domains<Domains,ArgTypes>();
+        assert( arg_tidv );
+
+        for(int i=0; i<sigc ;++i) {
+            std::array<const std::type_info*,ARGC>  sig_tidv;
+            const auto &sig = *sigs[i];
+            for(int j=0; j<ARGC ;++j)
+                sig_tidv[j] = rt_domains[j][sig[j]];
+
+            sig_matches[i] = sum_mapxy(&sig_tidv[0], &sig_tidv[ARGC], arg_tidv, std::equal_to<const std::type_info*>());
+        }
+
+
+        auto gathered = gs.alloc<const sig_type*[]>(sigc);
+        auto do_reduce = [&sigc,sigs=sigs.get(),sig_matches,indices,gathered=gathered.get()]() {
+            sigc = max_elements_indexed(sig_matches, sig_matches+sigc, indices) - indices;
+
+            for(int i=0; i<sigc ;++i) gathered[i] = sigs[indices[i]];
+            for(int i=0; i<sigc ;++i) sigs[i]     = gathered[i];
+        };
+
+        do_reduce();
+
+        if( 1 < sigc ) 
+        {
+            for(int i=0; i<sigc ;++i) {
+                sig_matches[i] = sum_mapxy(*sigs[i], &castmaps[0], [castmap_cell_invalid](int x, auto cmap){
+                    return cmap[x] != castmap_cell_invalid;
+                });
+            }
+
+            do_reduce();
+        }
+    }//end-if( 1 < sigc )  //check exact type matches
+
+
+
+    auto newsigs = gs.alloc<sig_type[]>(sigc);
+    for(int i=0; i<sigc ;++i)  newsigs[i]    = *sigs[i];
+    for(int i=0; i<sigc ;++i) *(sig_first+i) = newsigs[i];
+
+    return sigc;
+}
+
+template<typename Domains, typename ArgTypes, typename Collection, typename Castmaps>
+auto reduce_sigs(Collection &sigcol, const Castmaps &castmaps, int castmap_cell_invalid, const std::type_info *arg_tidv[] )
+{
+    return reduce_sigs<Domains,ArgTypes>(std::begin(sigcol), std::end(sigcol), castmaps, castmap_cell_invalid, arg_tidv );
+}
+
+
+
+
+namespace drtti {////////////////////////////////////////////////////////////
+
+template<typename __Domain, typename Iter>
+unsigned find_closest_bases(Iter first, Iter last)
+{
+    return reduce_sigs_short(first, last, drtti_ismap<drtti::map_is_base_of, __Domain>()) - first;
+}
+
+
+namespace vane_detail {
+    template<typename Iter>
+    int *__gather_base_indices(Iter castmap, int n, int *bases, decltype(castmap[0]) _CASTMAP_CELL_INVALID) {
+        for(int i=0; i < n  ;++i)
+            if( *(castmap+i) != _CASTMAP_CELL_INVALID )
+                *bases++ = i;
+        return bases;
+    }
+}
+
+template<typename __Domain, typename __CastmapRow>
+unsigned find_closest_bases_from_castmap(const __CastmapRow &castmap, int *bases, decltype(castmap[0]) _CASTMAP_CELL_INVALID) {
+
+    static_assert( std::tuple_size<__CastmapRow>::value == std::tuple_size<__Domain>::value, "");
+
+    int *last = vane_detail::__gather_base_indices(std::begin(castmap), std::tuple_size<__Domain>::value, bases, _CASTMAP_CELL_INVALID);
+    return find_closest_bases<__Domain>(bases, last);
+}
+
+}//end-namespace drtti ////////////////////////////////////////////////////////////
+
+
+
+/*---------------------------------------------------------------------
+    virtual_<>
 */
-		template <class T, class typelist, bool _assert_=true>
-		struct ___tuple_index;
-		//for tuple<>
-			template <bool _assert_, class T, class...Types>
-			struct ___tuple_index<T, std::tuple<T, Types...>, _assert_> {
-				enum { value = 0 };
-			};
+struct __virt : vtype
+{
+//  using vtypeid_type  = int;
 
-			template <class T>
-			struct ___tuple_index<T, std::tuple<>, false> {
-				enum { value = -1 };
-			};
-////////////
-			template <class T, class U, class... Types, bool _assert_>
-			struct ___tuple_index<T, std::tuple<U, Types...>, _assert_> :
-				std::conditional< 
-					0<=___tuple_index<T, std::tuple<Types...>, _assert_>::value,
-					std::integral_constant<int,1+___tuple_index<T, std::tuple<Types...>, _assert_>::value>,
-					std::integral_constant<int,-1>
-				>::type
-			{ };
+    virtual ~__virt() = 0;
 
-	template<typename T,typename List, bool _assert_=true, int _default_=-1>
-	struct _tuple_index {
-		enum { _value = ___tuple_index<T,List, _assert_>::value };
-		static constexpr int
-			value = std::conditional_t<
-				_value >= 0,
-				std::integral_constant<int,_value>,
-				std::integral_constant<int,_default_>
-			>::value;
-	};
-	template<typename T,typename List, bool _assert_=true, int _default_=-1>
-	constexpr int tuple_index = _tuple_index<T,List, _assert_,_default_>::value;
-/*---------------------------------------------------------------------------------------------
-	tuple_count_v<X, tuple<...>>
-	tuple_count_v<X, tuple<>>
-*/
-		template <typename X, typename T>
-		struct __tuple_count;
+    __virt(vtypeid_type id) : vtype(id) {}
+};
 
-		template <typename X>
-		struct __tuple_count<X, std::tuple<>> : std::integral_constant<int, 0> { };
+inline __virt::~__virt() {}
 
-		template <typename X, typename T, typename...U>
-		struct __tuple_count<X, std::tuple<T,U...>>
-			: std::integral_constant<int, (std::is_same<T,X>::value ? 1 : 0) + __tuple_count<X,std::tuple<U...>>::value > { };
 
-	template <typename X, typename Tuple>
-	constexpr int tuple_count_v = __tuple_count<X,Tuple>::value;
-/*---------------------------------------------------------------------------------------------
-	tuple_n<N,T>
-		tuple_n<3,int>
-*/
-	namespace __vane_helper__ {
-		template <typename T, typename U>
-			struct __tuple_n;
-		template <typename T, size_t...I>
-			struct __tuple_n<T, std::integer_sequence<long unsigned,I...>> {
-				using type = std::tuple< typename std::conditional<(I>=0),T,void>::type...   >;
-			};
-	};
-	template <int N, typename T>
-		using tuple_n = typename __vane_helper__::__tuple_n<T, std::make_index_sequence<N>>::type;
 
-/*---------------------------------------------------------------------------------------------
-	tuple_cat_t<tuple<...>, tuple<...>, tuple<...>>
-	tuple_cat_t<tuple<...> >
-*/
-		template<typename...T>
-			struct __tuple_cat_helper;
 
-		template<typename...T>
-			struct __tuple_cat_helper<std::tuple<T...>> {
-				using type = std::tuple<T...>;
-			};
-		template<typename...Ts, typename...Us>
-			struct __tuple_cat_helper<std::tuple<Ts...>, std::tuple<Us...>> {
-				using type = std::tuple<Ts...,Us...>;
-			};
-		template<typename T, typename U, typename...Rest>
-			struct __tuple_cat_helper<T,U,Rest...> {
-				using type = typename __tuple_cat_helper<typename __tuple_cat_helper<T,U>::type, Rest...>::type;
-			};
-		template<>
-			struct __tuple_cat_helper<> {
-				using type = std::tuple<>;
-			};
-	template<typename...T>
-		using tuple_cat_t = typename __tuple_cat_helper<T...>::type;
-	//-------------------------------------------------
-	template<typename Set>
-	struct __tuple_catInner;
+namespace vane_detail {
+    template<typename __Domain, typename __BaseType, bool __MI>
+    struct __VTypemap_typemap_base;
+}
 
-	template<typename...T>
-	struct __tuple_catInner<std::tuple<T...>> {
-		using type = tuple_cat_t<T...>;
-	};
 
-	template <typename...T>
-	using tuple_catInner = typename __tuple_catInner<T...>::type;
-/*---------------------------------------------------------------------------------------------
-	tuple_add_t<tuple<>>
-	tuple_add_t<tuple<>, X,Y,Z...>
-*/
-		template <typename...T>
-		struct tuple_add;
 
-		template <typename...T, typename...U>
-		struct tuple_add<std::tuple<T...>,U...> {
-			using type = tuple_cat_t<std::tuple<T...>, std::tuple<U>...>;
-		};
-	template <typename...T>
-	using tuple_add_t = typename tuple_add<T...>::type;
 
-/*---------------------------------------------------------------------------------------------
-	tuple_union<>::type
-		tuple_union<tuple<...>, int>
-		tuple_union<tuple<...>, tuple<...>>
-*/
-		template <typename...T>
-		struct tuple_union;
 
-			template <typename T, typename U>
-			struct tuple_union<T,U> {
-				using type = typename tuple_union<T,std::tuple<U>>::type;
-			};
+template<typename __BasePoly>
+struct virtual_;
 
-			template <typename T, typename U>
-			struct tuple_union<T,std::tuple<U>> {
-				using type = 
-					typename std::conditional<
-						(0 > tuple_index<U,T,false>),
-						decltype(  std::tuple_cat(	std::declval<T>(),
-													std::declval<std::tuple<U>>())	),
-						T
-					>::type;
-			};
 
-			template <typename T, typename U, typename...Us>
-			struct tuple_union<T,std::tuple<U,Us...>> {
-				using type = 
-					typename tuple_union<
-						typename tuple_union<T,U>::type,
-						std::tuple<Us...>
-					>::type;
-			};
-		template <typename T,typename U, typename...V>
-		struct tuple_union<T,U,V...> {
-			using type = typename tuple_union< typename tuple_union<T,U>::type, V... >::type;
-		};
-	template<typename...T>
-	using tuple_union_t = typename tuple_union<T...>::type;
-/*---------------------------------------------------------------------------------------------
-	tuple_uniq_t< tuple<...> >
-		tuple_uniq_t<tuple<  tuple<A,B>,tuple<A,B,C>,tuple<A,B>   >>	-> tuple< tuple<A,B>, tuple<A,B,C>>
-*/
-		template <typename T, typename Sum=std::tuple<>>
-		struct __tuple_uniq;
 
-		template <typename...S>
-		struct __tuple_uniq<std::tuple<>,std::tuple<S...>> {
-			using type = std::tuple<S...>;
-		};
-		template <typename T,typename...Ts, typename...S>
-		struct __tuple_uniq<std::tuple<T,Ts...>,std::tuple<S...>> {
-			using type = typename __tuple_uniq<
-				std::tuple<Ts...>,
-				typename std::conditional<
-					(0>tuple_index<T,std::tuple<S...>,false>), std::tuple<S...,T>, std::tuple<S...>
-				>::type
-			>::type;
-		};
-	template <typename T>
-	using tuple_uniq_t = typename __tuple_uniq<T>::type;
+template<typename __BasePoly>
+struct virtual_ : __virt
+{
+protected:
+    using _Self = virtual_<__BasePoly>;
+    using _Super = __virt;
 
 
-/*---------------------------------------------------------------------------------------------
-	tuple_setAt<1,tuple<...>>
-*/
-	template<size_t I, typename F, typename T, typename Seq>
-	struct __tuple_setAt__;
+    virtual_(vtypeid_type id) : __virt(id) {}
 
-	template<size_t I, typename F, typename T, typename TJ, TJ...J>
-	struct __tuple_setAt__<I,F,T,std::integer_sequence<TJ,J...>> {
-		using type = std::tuple< typename std::conditional<I==J, T, std::tuple_element_t<J,F> >::type... >;
-	};
-
-	template<size_t I, typename F, typename T=void>
-	struct __tuple_setAt {
-		using type = typename __tuple_setAt__<I,F,T, std::make_index_sequence< std::tuple_size<F>::value  >>::type;
-	};
-
-	template<size_t I, typename F, typename T=void>
-	using tuple_setAt = typename __tuple_setAt<I,F,T>::type;
-
-
-/*---------------------------------------------------------------------------------------------
-	tuple_contains<tuple<A,B,C>, tuple<A,B>>;
-	tuple_contains<tuple<A,B,C>, tuple<>>;
-*/
-		template<typename T, typename U>
-		struct __tuple_contains;
-
-		template<typename T, typename...U>
-		struct __tuple_contains<T,std::tuple<U...>>
-			: std::integral_constant<bool,  iseq_andAll<iseq<(0<=tuple_index<U,T,false>)...>> > {
-		};
-		template<typename T>
-		struct __tuple_contains<T,std::tuple<>>
-			: std::integral_constant<bool,  true> {
-		};
-	template<typename T, typename U>
-	constexpr bool tuple_contains = __tuple_contains<T,U>::value;
-
-
-/*---------------------------------------------------------------------------------------------
-	tuple_sort_t<tuple<Sub,Sub>, tuple<Whole,Sub>>
-*/
-		template <typename T,typename Order, typename=void>
-		struct __tuple_sort;
-
-		template <typename T,typename...O>
-		struct __tuple_sort<T,std::tuple<O...>>
-			: std::enable_if<tuple_contains<std::tuple<O...>,T>, tuple_cat_t< tuple_n<tuple_count_v<O, T>, O>... > > {};
-
-	template<typename T, typename Order>
-		using tuple_sort_t = typename __tuple_sort<T,Order>::type;
-
-/*---------------------------------------------------------------------------------------------
-	tuple_selectAt<tuple<int,char,float,long,int>, 1,3> --->	tuple<char, long>
-*/
-
-		template<bool select, typename T, typename Seq, size_t...K>
-		struct __tuple_selectAt;
-
-		template<bool select, typename T, size_t...I, size_t...K>
-		struct __tuple_selectAt<select, T, std::integer_sequence<size_t,I...>, K...> {
-			using type = tuple_cat_t< 
-				std::tuple<>,
-				std::conditional_t<
-					(0>iseq_indexOf<I,iseq<(int)K...>,false>),
-					std::conditional_t<select, std::tuple<>, std::tuple<std::tuple_element_t<I,T>>>,
-					std::conditional_t<select, std::tuple<std::tuple_element_t<I,T>>, std::tuple<>>
-				>...
-			>;
-		};
-	template<typename T, size_t...K>
-		using tuple_selectAt = typename __tuple_selectAt<true, T, std::make_index_sequence<std::tuple_size<T>::value>, K...>::type;
-	template<typename T, size_t...K>
-		using tuple_omitAt = typename __tuple_selectAt<false, T, std::make_index_sequence<std::tuple_size<T>::value>, K...>::type;
-/*---------------------------------------------------------------------------------------------
-	tuple_permute<tuple<A,B,C>>;
-*/
-		template <typename T, typename Seq=std::make_index_sequence<std::tuple_size<T>::value>, typename G=std::tuple<>>
-		struct __tuple_permute;
-
-		template <typename...Ts, size_t...I, typename G>
-		struct __tuple_permute<std::tuple<Ts...>,std::index_sequence<I...>,G> {
-			using type = tuple_cat_t<typename __tuple_permute< tuple_omitAt<std::tuple<Ts...>,I>, std::make_index_sequence<sizeof...(Ts)-1>, tuple_add_t<G,Ts> >::type...  >;
-		};
-
-		template <typename G>
-		struct __tuple_permute<std::tuple<>,std::index_sequence<>,G> {
-			using type = std::tuple<G>;
-		};
-
-	template <typename T>
-	using tuple_permute = typename __tuple_permute<T>::type;
-/*---------------------------------------------------------------------------------------------
-	tuple_cartesian_product<tuple<tuple<A,B>,tuple<X,Y>>>
-*/
-	namespace __vane_helper__ {
-		template <typename Tuples, typename Prefix=std::tuple<>>
-		struct __cprod;
-
-		template <typename Prefix, typename...Ts, typename...Us>
-		struct __cprod<std::tuple<std::tuple<Ts...>, Us...>, Prefix> {
-			using type = tuple_cat_t< typename __cprod<std::tuple<Us...>, tuple_add_t<Prefix,Ts>>::type... >;
-		};
-		template <typename Prefix>
-		struct __cprod<std::tuple<>, Prefix> {
-			using type = std::tuple<Prefix>;
-		};
-	}
-	template <typename Tuples>
-	using tuple_cartesian_product = typename __vane_helper__::__cprod<Tuples>::type;
-
-/*---------------------------------------------------------------------------------------------
-	tuple_map<tuple<...>, afilter, filterArgs...>;
-
-			template<typename Ti, size_t I, typename Tuple, typename...FilterParam>
-			struct afilter
-				: integral_constant<int, (I>=tuple_size<Tuple>::value/2)> { using map=tuple<Ti,Ti,Ti>; };
-		
-			tuple_map<tuple<...>, afilter, filterArg...>;
-*/
-		template<typename Tuple, template<typename,size_t,typename,typename...> class Filter, typename Seq=std::make_index_sequence<std::tuple_size<Tuple>::value>, typename...FilterParam>
-		struct __tuple_map;
-
-		template<typename Tuple, template<typename,size_t,typename,typename...> class Filter, typename...FilterParam, size_t...I>
-		struct __tuple_map<Tuple, Filter, std::index_sequence<I...>, FilterParam...> {
-			using type = tuple_cat_t<
-				typename std::conditional<
-					__T_value_v<Filter<std::tuple_element_t<I,Tuple>,I,Tuple,FilterParam...>,  bool, true>,
-					__T_map_t  <Filter<std::tuple_element_t<I,Tuple>,I,Tuple,FilterParam...>,  std::tuple<typename std::tuple_element<I,Tuple>::type>>,
-					std::tuple<>
-				>::type...
-			>;
-			using complement = tuple_cat_t<
-				typename std::conditional<
-					__T_value_v<Filter<std::tuple_element_t<I,Tuple>,I,Tuple,FilterParam...>,  bool, true>,
-					std::tuple<>,
-					std::tuple<std::tuple_element_t<I,Tuple>>
-					//XXX//__T_map_t  <Filter<std::tuple_element_t<I,Tuple>,I,Tuple,FilterParam...>,  std::tuple<typename std::tuple_element<I,Tuple>::type>>,
-				>::type...
-			>;
-		};
-
-	template<typename Tuple, template<typename,size_t,typename,typename...> class Filter,typename...FilterParam>
-	using tuple_map = typename __tuple_map<Tuple,Filter,std::make_index_sequence<std::tuple_size<Tuple>::value>,FilterParam...>::type;
-
-	template<typename Tuple, template<typename,size_t,typename,typename...> class Filter,typename...FilterParam>
-	using tuple_map2 = __tuple_map<Tuple,Filter,std::make_index_sequence<std::tuple_size<Tuple>::value>,FilterParam...>;
-
-/*---------------------------------------------------------------------------------------------
-	tuple_mapv<tuple<A,B,C,D>, aMapper, filterArg>;
-*/
-		template<typename Tuple, template<typename,size_t,typename,typename...> class Mapper, typename Seq=std::make_index_sequence<std::tuple_size<Tuple>::value>, typename...FilterParam>
-		struct __tuple_mapv;
-
-		template<typename Tuple, template<typename,size_t,typename,typename...> class Mapper, typename...FilterParam, size_t...I>
-		struct __tuple_mapv<Tuple, Mapper, std::index_sequence<I...>, FilterParam...> {
-			using type = iseq_cat_t<
-				__T_map_t  <
-					Mapper<std::tuple_element_t<I,Tuple>,I,Tuple,FilterParam...>,
-					iseq< __T_value_v< Mapper< std::tuple_element_t<I,Tuple>,I,Tuple,FilterParam...>, int, 0> >
-					/*msc:
-						\work\test-misc\my\tuple_foreach.h|974| fatal error C1001: An internal error has occurred in the compiler.
-						|| (compiler file 'f:\dd\vctools\compiler\cxxfe\sl\p1\c\convert.cpp', line 778)
-						||  To work around this problem, try simplifying or changing the program near the locations listed above.
-						|| Please choose the Technical Support command on the Visual C++ 
-						||  Help menu, or open the Technical Support help file for more information
-					*/
-				>...
-			>;
-		};
-
-	template<typename Tuple, template<typename,size_t,typename,typename...> class Mapper,typename...FilterParam>
-	using tuple_mapv = typename __tuple_mapv<Tuple,Mapper,std::make_index_sequence<std::tuple_size<Tuple>::value>,FilterParam...>::type;
-
-
-/*---------------------------------------------------------------------------------------------
-	tuple_all_of<tuple<A,B,C,D>, afilter, filterparams...>
-	tuple_any_of<tuple<A,B,C,D>, afilter, filterparams...>
-*/
-		template<typename T,template<typename,size_t,typename,typename...>class Filter, typename...Param>
-		struct __tuple_all_of;
-
-		template<template<typename,size_t,typename,typename...>class Filter, typename...T, typename...Param>
-		struct __tuple_all_of<std::tuple<T...>,Filter,Param...>
-			: std::integral_constant<bool, sizeof...(T)==std::tuple_size< tuple_map< std::tuple<T...>, Filter, Param... > >::value > { };
-
-	template<typename T,template<typename,size_t,typename,typename...>class Filter, typename...Param>
-	constexpr bool tuple_all_of = __tuple_all_of<T,Filter,Param...>::value;
-
-		template<typename T,template<typename,size_t,typename,typename...>class Filter, typename...Param>
-		struct __tuple_any_of;
-
-		template<template<typename,size_t,typename,typename...>class Filter, typename...T, typename...Param>
-		struct __tuple_any_of<std::tuple<T...>,Filter,Param...>
-			: std::integral_constant<bool, !!std::tuple_size< tuple_map< std::tuple<T...>, Filter, Param... > >::value > { };
-
-	template<typename T,template<typename,size_t,typename,typename...>class Filter, typename...Param>
-	constexpr bool tuple_any_of = __tuple_any_of<T,Filter,Param...>::value;
-
-
-
-/*---------------------------------------------------------------------------------------------
-	iseq_filters
-*/
-	namespace iseq_filters {
-		template<int Si, size_t I, typename ISeq, typename Tuples>
-		struct map_tuple_size
-			{ using map = iseq< std::tuple_size<std::tuple_element_t<I,Tuples>>::value >; };
-	
-		template<int SI, size_t I, typename ISeq>
-		struct map_nonZero_into_index	{ using map = iseq< SI ? I : 0>; };
-
-		template<int SI, size_t I, typename ISeq>
-		struct filter_nonZero_into_index : std::integral_constant<bool, SI> { using map = iseq<I>; };
-
-		template<int SI, size_t I, typename ISeq, typename V>
-		struct filter_value_into_index : std::integral_constant<bool, SI==V::value> { using map = iseq<I>; };
-
-		template<int SI, size_t I, typename ISeq>
-		struct map_not
-			{ using map = iseq< !SI >; };
-
-		template<int SI, size_t I, typename ISeq>
-		struct map_inverse
-			{ using map = iseq< iseq_indexOf<I,ISeq> >; };
-
-
-		template<typename EI, size_t I, typename Tuple, typename Ref, typename _assert_=std::false_type, typename _default_=std::integral_constant<int,-1>>
-		struct map_index {
-			using map = iseq< tuple_index<EI,Ref,_assert_::value, _default_::value> >;
-		};
-	}
-
-	template<typename Tuples>
-	using tuple_sizes = iseq_map<std::make_integer_sequence<int,std::tuple_size<Tuples>::value>, iseq_filters::map_tuple_size, Tuples>;
-
-	template<typename ISeq>
-	using iseq_inverse = iseq_map<ISeq, iseq_filters::map_inverse>;
-
-
-
-/*---------------------------------------------------------------------------------------------
-	iseq_inc<S, delta>::type;
-	iseq_scale<S, x>::type;
-	iseq_plus<A,B>::type
-	iseq_mul<A,B>::type
-	iseq_div<A,B>::type
-	iseq_partial_sum<A>
-*/
-	template<typename ISeq, int D>
-	struct iseq_inc;
-
-	template<int...I, int D>
-	struct iseq_inc<iseq<I...>,D> {
-		using type = iseq<(I+D)...>;
-	};
-
-	////////////////////////////////////////////////////////////////
-	template<typename ISeq, int S>
-	struct iseq_scale;
-
-	template<int...I, int S>
-	struct iseq_scale<iseq<I...>,S> {
-		using type = iseq<(I*S)...>;
-	};
-
-	////////////////////////////////////////////////////////////////
-	template<typename SeqA, typename SeqB>
-	struct iseq_plus;
-
-	template<int...I, int...J>
-	struct iseq_plus<iseq<I...>,iseq<J...>> {
-		using type = iseq<(I+J)...>;
-	};
-
-	////////////////////////////////////////////////////////////////
-	template<typename SeqA, typename SeqB>
-	struct iseq_mul;
-
-	template<int...I, int...J>
-	struct iseq_mul<iseq<I...>,iseq<J...>> {
-		using type = iseq<(I*J)...>;
-	};
-
-	////////////////////////////////////////////////////////////////
-	template<typename SeqA, typename SeqB>
-	struct iseq_div;
-
-	template<int...I, int...J>
-	struct iseq_div<iseq<I...>,iseq<J...>> {
-		using type = iseq<(I/J)...>;
-	};
-
-	////////////////////////////////////////////////////////////////
-	template<typename ISeq, typename G=iseq<0>, int S=0>
-	struct _ISeq_partial_sum;
-
-	template<int I0, int...I, typename G>
-	struct _ISeq_partial_sum<iseq<I0, I...>, G> {
-		using next = _ISeq_partial_sum<iseq<I...>, iseq_add_t<G, iseq_at<iseq_size<G>-1,G>+I0>>;
-		using type = typename next::type;
-	};
-
-	template<typename G>
-	struct _ISeq_partial_sum<iseq<>, G> {
-		using type = G;
-	};
-
-	template<typename ISeq>
-	using iseq_partial_sum = iseq_omitAt<typename _ISeq_partial_sum<ISeq>::type,0>;
-
-
-/*---------------------------------------------------------------------------------------------
-	tuple_filter_is_base_of   <Ti,I,Tuple,D>
-	tuple_filter_is_derived_of<Ti,I,Tuple,B>
-
-	is_base_of_all   <X,tuple<D...>>
-	is_derived_of_all<X,tuple<B...>>
-*/
-	namespace tuple_filters {
-		template<typename T, size_t I, typename Tuple, typename D>
-		struct is_base_of: std::is_base_of<T,D> { };
-
-		template<typename T, size_t I, typename Tuple, typename B>
-		struct is_derived_from: std::is_base_of<B,T> { };
-
-		template<typename T, size_t I, typename Tuple, typename X>
-		struct is_same: std::is_same<T,X> { };
-
-		template<typename T, size_t I, typename Tuple, typename X>
-		struct is_not_same: std::integral_constant<bool, !std::is_same<T,X>::value > { };
-
-		template<typename T, size_t I, typename Tuple, typename D>
-		struct basetype_is_base_of: vane::basetype_is_base_of<T,D> { };
-
-		template<typename T, size_t I, typename Tuple, typename B>
-		struct basetype_is_derived_from: vane::basetype_is_base_of<B,T> { };
-	}
-
-	//-------------------------------------------------------------------------
-	template<typename T, typename D>
-	struct __is_base_of_all;
-
-	template<typename T, typename...D>
-	struct __is_base_of_all<T,std::tuple<D...>>
-		: std::integral_constant<bool, tuple_all_of<std::tuple<D...>,tuple_filters::is_derived_from, T> > { };
-
-	template<typename T>
-
-	struct __is_base_of_all<T,std::tuple<>>;
-
-	template<typename T, typename D>
-	constexpr bool is_base_of_all = __is_base_of_all<T,D>::value;
-
-
-			template<typename T, typename B>
-			struct __is_derived_of_all;
-
-			template<typename T>
-			struct __is_derived_of_all<T,std::tuple<>>;
-
-			template<typename T, typename...B>
-			struct __is_derived_of_all<T,std::tuple<B...>>
-				: std::integral_constant<bool, tuple_all_of<std::tuple<B...>,tuple_filters::is_base_of, T> > { };
-
-	template<typename T, typename B>
-	constexpr bool is_derived_of_all = __is_derived_of_all<T,B>::value;
-
-	namespace tuple_filters {
-		template<typename T, size_t I, typename Tuple, typename TypeList>
-		struct is_base_of_all: std::integral_constant<bool, vane::is_base_of_all<T, TypeList> > { };
-
-		template<typename T, size_t I, typename Tuple, typename TypeList>
-		struct is_derived_of_all: std::integral_constant<bool, vane::is_derived_of_all<T, TypeList> > { };
-	}
-
-	template <typename...T>
-	struct common_base {
-		using types = std::tuple<T...>;
-		using type  = std::tuple_element_t<0,tuple_map<types, tuple_filters::is_base_of_all, types>>;
-	};
-
-	template <typename...T>
-	using common_base_t = typename common_base<T...>::type;
-
-	template <typename>
-	struct common_base_of_packed;
-
-		template <typename...T>
-		struct common_base_of_packed<std::tuple<T...>> {
-			using types = std::tuple<T...>;
-			using type  = std::tuple_element_t<0,tuple_map<types, tuple_filters::is_base_of_all, types>>;
-		};
-		template <typename T>
-		using common_base_of_packed_t = typename common_base_of_packed<T>::type;
-
-
-	namespace tuple_filters {
-		template<typename T, size_t I, typename Tuple, typename N>
-		struct skipN : std::integral_constant<bool, (int(I)>= N::value) > { };
-
-		template<typename T, size_t I, typename Tuple>
-		struct map_tuple_wrapped { using map = std::tuple< std::tuple<T> >; };
-
-		template<typename X, size_t I, typename T>
-		struct map_add_pointer
-			{ using map = std::tuple<std::add_pointer_t<X>>; };
-
-		template<typename X, size_t I, typename T>
-		struct map_add_reference
-			{ using map = std::tuple<X&>; };
-
-		template<typename X, size_t I, typename T>
-		struct map_add_rvalue_reference
-			{ using map = std::tuple<std::add_rvalue_reference_t<X>>; };
-
-		template<typename X, size_t I, typename T>
-		struct map_remove_pointer
-			{ using map = std::tuple<std::remove_pointer_t<X>>; };
-
-		template<typename X, size_t I, typename T>
-		struct map_remove_reference
-			{ using map = std::tuple<std::remove_reference_t<X>>; };
-
-		template<typename X, size_t I, typename T>
-		struct map_remove_pointer_or_reverence {
-			using map = std::tuple< remove_pointer_or_reference_t<X> >;
-		};
-	}
-	template<typename T, int N>
-	using tuple_skip_n = tuple_map<T, tuple_filters::skipN, std::integral_constant<int, N>>;
-
-	//add_xxx
-	template<typename Tuple>
-	using add_pointers = tuple_map<Tuple, tuple_filters::map_add_pointer>;
-
-	template<typename Tuple>
-	using add_references = tuple_map<Tuple, tuple_filters::map_add_reference>;
-
-	template<typename Tuple>
-	using add_rvalue_references = tuple_map<Tuple, tuple_filters::map_add_rvalue_reference>;
-
-	//remove_xxx
-	template<typename Tuple>
-	using remove_pointers = tuple_map<Tuple, tuple_filters::map_remove_pointer>;
-
-	template<typename Tuple>
-	using remove_references = tuple_map<Tuple, tuple_filters::map_remove_reference>;
-
-	template<typename Tuple>
-	using remove_pointers_or_references = tuple_map<Tuple, tuple_filters::map_remove_pointer_or_reverence>;
-
-
-/*---------------------------------------------------------------------------------------------
-	tuple_indices<tuple<A,A,C,D>, tuple<A,B,C,D>>	--> iseq<0,0,3,4>
-*/
-	template <typename L,typename R, typename _assert_=std::true_type, typename _default_=std::integral_constant<int,-1>>
-	struct __tuple_indices {
-		using type = tuple_mapv<L, iseq_filters::map_index, R,_assert_,_default_>;
-	};
-	template <typename L,typename R, typename _assert_=std::true_type, typename _default_=std::integral_constant<int,-1>>
-	using tuple_indices = typename __tuple_indices<L,R,_assert_,_default_>::type;
-
-
-
-
-
-/*---------------------------------------------------------------------------------------------------
-	class_tree
-*/
-
-namespace class_tree {///////////////////////////////////////////////////////////////////////////////////
-/*
-	struct inheritance_groups;
-*/
-template<typename Elements, typename Groups=std::tuple<>>
-struct inheritance_groups;
-
-	template<typename T, size_t I, typename Tuple, typename New>
-	struct filter_group_sub_of: std::integral_constant<bool, std::is_base_of<New,std::tuple_element_t<0,T>>::value> { };
-
-	template<typename T, size_t I, typename Tuple, typename New>
-	struct filter_group_not_sub_of: std::integral_constant<bool, !std::is_base_of<New,std::tuple_element_t<0,T>>::value> { };
-
-	template<typename T, size_t I, typename Tuple, typename New>
-	struct filter_group_base_of: std::integral_constant<bool, std::is_base_of<std::tuple_element_t<0,T>,New>::value> { };
-
-	template<typename T, size_t I, typename Tuple, typename New>
-	struct mapper_addNewSub {
-		using map = std::tuple<std::conditional_t<
-			!!std::is_base_of<std::tuple_element_t<0,T>,New>::value,
-			tuple_add_t<T,New>,
-			T
-		>>;
-	};
-
-	template<typename E,typename...Ei, typename...Gi>
-	struct inheritance_groups<std::tuple<E,Ei...>, std::tuple<Gi...>> {
-		using type = 
-			typename inheritance_groups<
-				std::tuple<Ei...>,
-				std::conditional_t<
-					!!std::tuple_size<tuple_map<std::tuple<Gi...>, filter_group_base_of, E>>::value,
-					tuple_map<std::tuple<Gi...>, mapper_addNewSub, E>,
-					std::conditional_t<
-						!!std::tuple_size<tuple_map<std::tuple<Gi...>, filter_group_sub_of, E>>::value,
-						tuple_cat_t<
-							std::tuple<
-								tuple_uniq_t<
-									tuple_cat_t<
-										std::tuple<E>,
-										tuple_catInner<tuple_map<std::tuple<Gi...>, filter_group_sub_of, E>>
-									>
-								>
-							>,
-							tuple_map<std::tuple<Gi...>, filter_group_not_sub_of, E>
-						>,
-						std::tuple<Gi...,std::tuple<E>>
-					>
-				>
-			>::type;
-	};
-
-	template<typename G>
-	struct inheritance_groups<std::tuple<>, G> {
-		using type = G;
-	};
-
-/*------------------------------------------------------------------------------------
-	getBranch
-*/
-template<typename Elements, typename SLine=std::tuple<>>
-struct getBranch;
-
-	template<typename S>
-	struct getBranch<std::tuple<>,S> {
-		using type = S;
-	};
-
-	template<typename T,typename S>
-	struct getBranch<std::tuple<T>,S> {
-		using type = tuple_add_t<S,T>;
-	};
-
-	template<typename T,typename...Ri, typename S>
-	struct getBranch<std::tuple<T,Ri...>,S> {
-		using _groups = typename inheritance_groups<std::tuple<T,Ri...>>::type;
-		using type = 
-			std::conditional_t<
-				(1<std::tuple_size<_groups>::value),
-				S,
-				typename getBranch<std::tuple<Ri...>, tuple_add_t<S,T> >::type
-			>;
-	};
-
-/*-----------------------------------------------------------------------------------------------
-	struct inheritance_tree
-*/
-template<typename Elements>
-struct inheritance_tree;
-
-			template<typename T, size_t I, typename Tuple>
-			struct mapper_getBranch{
-				using map = std::tuple< typename getBranch<T>::type >;
-			};
-
-			template<typename T, size_t I, typename Tuple, typename Branches>
-			struct mapper_subTree {
-				using map = std::tuple<inheritance_tree<tuple_skip_n<T, std::tuple_size<std::tuple_element_t<I,Branches>>::value>>>;
-			};
-
-	template<typename...T>
-	struct inheritance_tree<std::tuple<T...>> {
-		using groups   = typename inheritance_groups<std::tuple<T...>>::type;
-		using branches = tuple_map<groups, mapper_getBranch >;
-		using subtrees = tuple_map<groups, mapper_subTree, branches>;
-	};
-	template<>
-	struct inheritance_tree<std::tuple<>> {
-		using groups   = std::tuple<>;
-		using branches = std::tuple<>;
-		using subtrees = std::tuple<>;
-	};
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-		template <typename Tuple, typename WholeSet, typename Index>
-		struct __get_branch;
-
-		template <typename...T, typename WholeSet, typename Index>
-		struct __get_branch<std::tuple<T...>,WholeSet,Index> {
-			static const Index *get() {
-				static const Index __branch[sizeof...(T)+1] = {
-					sizeof...(T),
-					tuple_index<T,WholeSet>...
-				};
-
-				return &__branch[1];
-			}
-		};
-
-		template <typename Tuples, typename WholeSet, typename Index>
-		struct __get_branches;
-
-		template <typename...T, typename WholeSet, typename Index>
-		struct __get_branches<std::tuple<T...>,WholeSet,Index> {
-			static const Index *const *get() {
-				static const Index *const __branches[sizeof...(T)] = { __get_branch<T,WholeSet,Index>::get()... };
-				return &__branches[0];
-			}
-		};
-
-
-	template <typename Index=unsigned short>
-	struct Node {
-		Index	n;
-
-		const Index	*const *branches;
-		const Node	*const *subtrees;
-	};
-
-template <typename Tree, typename WholeSet, typename Index=unsigned short>
-class build_classTree;
-
-	template<typename, typename WholeSet, typename Index>
-	struct __get_subtrees;
-
-	template<typename WholeSet, typename Index>
-	struct __get_subtrees<std::tuple<>, WholeSet, Index> {
-		static const Node<Index> *const *get() {
-			return nullptr;
-		}
-	};
-
-	template<typename...T, typename WholeSet,typename Index>
-	struct __get_subtrees<std::tuple<T...>,WholeSet,Index> {
-		static const Node<Index> *const *get() {
-			static const Node<Index> *const __nodes[sizeof...(T)] = { build_classTree<T,WholeSet,Index>::get()... };
-			return &__nodes[0];
-		}
-	};
-
-template <typename...T, typename WholeSet, typename Index>
-class build_classTree<inheritance_tree<std::tuple<T...>>,WholeSet,Index> {
-	using _Tree = inheritance_tree<std::tuple<T...>>;
-	enum { _NSUBS = std::tuple_size<typename _Tree::branches>::value };
 public:
-	static const Node<Index> *get() {
-		static const Node<Index> __node{
-			_NSUBS,
-			__get_branches<typename _Tree::branches, WholeSet, Index>::get(),
-			__get_subtrees<typename _Tree::subtrees, WholeSet, Index>::get()
-		};
-		return &__node;
-	}
+    using base_type      = _Self;
+    using base_type_poly = __BasePoly;
+
+
+    template<typename __T, typename __Root=virtual_<__BasePoly>>
+    struct of : __Root, __T
+    {
+        static_assert(std::is_base_of<__BasePoly,__T>::value, "vane::virtual_<Base>::of<T>: invalid argument type T   //base type mismatch");
+
+    protected:
+        using _Self  = of<__T,__Root>;
+        using _Super = virtual_<__BasePoly>;
+
+    public:
+        using data_type = __T;
+
+        of() : _Super(__vtypeid)
+        { 
+            _init();
+        }
+
+        template<typename...Args>
+        of(Args&&...args) : _Super(__vtypeid), data_type{std::forward<Args>(args)...}
+        { 
+            _init();
+        }
+
+
+        static vtypeid_type static_vtypeid() { return __vtypeid; }
+
+    private:
+        void _init() {
+            this->_vtypeid = __vtypeid;
+            this->_vdiff = (char*)static_cast<base_type_poly*>(this) - (char*)this;
+
+            assert( ((char*)static_cast<base_type_poly*>(this) - (char*)this) <=  std::numeric_limits<vdiff_type>::max() );
+            assert( ((char*)static_cast<base_type_poly*>(this) - (char*)this) >=  std::numeric_limits<vdiff_type>::min() );
+        }
+
+
+        static vtypeid_type  __vtypeid;
+    };
+
+
+
+    using vdiff_type = int;
+    vdiff_type  _vdiff;
+
+
+protected:
+    static int __vtypeid_last;
+
+    template<typename __Domain, typename __BaseType, bool __MI>
+    friend struct vane::vane_detail::__VTypemap_typemap_base;
 };
 
-template <typename WholeSet, typename Index>
-struct build_classTree<inheritance_tree<std::tuple<>>,WholeSet,Index> {
-	static constexpr Node<Index> *get() {
-		return nullptr;
-	}
+
+template<typename __BasePoly>
+int virtual_<__BasePoly>::__vtypeid_last = 0;
+
+
+template<typename __BasePoly>
+template<typename __T, typename __Root>
+typename __virt::vtypeid_type  virtual_<__BasePoly>::of<__T,__Root>::__vtypeid = ++__vtypeid_last;
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+template<typename X, typename B>
+constexpr inline
+X *get(virtual_<B> *v) {
+    assert( (X*)((char*)v + cast_diff<X*, typename virtual_<B>::template of<X>*>()) == static_cast<typename virtual_<B>::template of<X>*>(v) );
+    return (X*)((char*)v + cast_diff<X*, typename virtual_<B>::template of<X>*>());
+}
+template<typename X, typename B>
+inline
+X &get(virtual_<B> &v) {
+    return *get<X*>(&v);
+}
+
+    template<typename X, typename B>
+    inline
+    X *get(const virtual_<B> *v) {
+        assert( (X*)((char*)v + cast_diff<X*, const typename virtual_<B>::template of<X>*>()) == static_cast<const typename virtual_<B>::template of<X>*>(v) );
+        return (X*)((char*)v + cast_diff<X*, const typename virtual_<B>::template of<X>*>());
+    }
+    template<typename X, typename B>
+    inline
+    X &get(const virtual_<B> &v) {
+        return *get<X*>(&v);
+    }
+
+
+
+template<typename T>
+struct is_virt : std::is_base_of<__virt,T> {};
+
+
+
+
+/*---------------------------------------------------------------------
+    var<>
+*/
+
+struct __var : vtype
+{
+    __var(vtypeid_type id) : vtype(id) {}
+protected:
+    virtual ~__var() = 0;
+    using vtype::vtype;
+
+    // data_container
+    template<typename T>
+    struct data_container : std::conditional_t<std::is_class<T>::value, T,std::tuple<T>> {
+        using Data = std::conditional_t<std::is_class<T>::value, T,std::tuple<T>>;
+        template<typename...Args> constexpr
+        data_container(Args&&...args) : Data{std::forward<Args>(args)...} {}
+
+        operator T&() {
+            return std::get<0>(*this);
+        }
+        operator const T&() const { 
+            return std::get<0>(*this);
+        }
+    };
 };
+
+inline __var::~__var() {}
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////
+
+template<typename...__Tags>
+struct var : __var
+{
+protected:
+
+    using _Self = var<__Tags...>;
+    using _Var = _Self;
+
+    using __var::__var;
+
+protected:
+    var(unsigned tid) : __var(tid) { assert(tid); }
+
+
+public:
+
+    template<typename T, typename __Root=_Self>
+    struct of : __Root, data_container<T>
+    {
+    private:
+        using Super = __Root;
+        using _data_container = data_container<T>;
+
+    protected:
+        using typename _data_container::Data;
+
+    public:
+        using data_type = T;
+        using data_container_type = data_container<T>;
+
+    public:
+        of() : Super(__vtypeid)  {}
+
+        template<typename...Args>
+        of(Args&&...args) : Super(__vtypeid), _data_container(std::forward<Args>(args)...)
+        { }
+
+
+    private:
+        using Super::_vtypeid;
+        static vtypeid_type  __vtypeid;
+    };
+
+protected:
+    static int __vtypeid_last;
+
+    template<typename __Domain, typename __BaseType, bool __MI>
+    friend struct vane::vane_detail::__VTypemap_typemap_base;
+
+};//struct var<___SI>
+
+
+
+template<typename... __Tags>
+int  var<__Tags...>::__vtypeid_last;
+
+
+template<typename... __Tags>
+template<typename T, typename __Root>
+__var::vtypeid_type var<__Tags...>::of<T,__Root>::__vtypeid = ++__vtypeid_last;
+
+
+
+
+namespace _vane_detail {///////////////////////////////////////////////////////////////
+
+    template<typename X, typename Var, bool=std::is_base_of<Var,X>::value>
+    struct __var_getter;
+
+    template<typename X, typename...Tags>
+    struct __var_getter<X, var<Tags...>,false>
+    {
+        static X &get(var<Tags...> &v) {
+            return *static_cast<typename var<Tags...>::template of<X>*>(&v);
+        }
+
+        static X *get(var<Tags...> *v) {
+            return &get(*v);
+        }
+    };
+
+    template<typename X, typename...__Tags>
+    struct __var_getter<X, var<__Tags...>,true>
+    {
+        static X &get(var<__Tags...> &v) {
+            return static_cast<X&>(v);
+        }
+
+        static X *get(var<__Tags...> *v) {
+            return &get(*v);
+        }
+    };
+    template<typename X, typename...Tags>
+    struct __var_getter<X, const var<Tags...>,false>
+    {
+        static X &get(const var<Tags...> &v) {
+            return *static_cast<const typename var<Tags...>::template of<X>*>(&v);
+        }
+
+        static X *get(const var<Tags...> *v) {
+            return &get(*v);
+        }
+    };
+
+    template<typename X, typename...__Tags>
+    struct __var_getter<X, const var<__Tags...>,true>
+    {
+        static X &get(const var<__Tags...> &v) {
+            return static_cast<X&>(v);
+        }
+
+        static X *get(const var<__Tags...> *v) {
+            return &get(*v);
+        }
+    };
+
+}//end-namespace _vane_detail {//////////////////////////////////////////////
+
+
+template<typename X, typename...Tags>
+inline
+X &get(var<Tags...> &v) {
+    return _vane_detail::__var_getter<X,var<Tags...>>::get(v);
+}
+
+template<typename X, typename...Tags>
+inline
+X *get(var<Tags...> *v) {
+    return _vane_detail::__var_getter<X,var<Tags...>>::get(v);
+}
+
+template<typename X, typename...Tags>
+inline
+X &get(const var<Tags...> &v) {
+    return _vane_detail::__var_getter<X,const var<Tags...>>::get(v);
+}
+
+template<typename X, typename...Tags>
+inline
+X *get(const var<Tags...> *v) {
+    return _vane_detail::__var_getter<X,const var<Tags...>>::get(v);
+}
+
+template<typename X, typename T>
+inline
+X &get(T &v) {
+    return static_cast<X&>(v);
+}
+
+template<typename X, typename T>
+inline
+X *get(T *v) {
+    return &get<X>(*v);
+}
+
+
+
+template<typename T>
+struct is_var : std::is_base_of<__var,T> {};
+
+
+namespace vane_detail {///////////////////////////////////////////////////////////////////////////////////////////
+
+/*---------------------------------------------------------------------
+    FX utils
+*/
+namespace FX_utils {
+
+    template<typename FX, typename RArgs, typename Args=remove_consts<RArgs>, class=std::__void_t<>>
+    struct __FX_exists_callable : std::false_type { 
+        using args = Args;
+    };
+
+    template< typename FX, typename RArgs, typename...As >
+    struct __FX_exists_callable<FX, RArgs, std::tuple<As...>, std::__void_t<decltype( std::declval<FX>()(std::declval<As>()...) )> >
+        : std::true_type {
+        using args = std::tuple<As...>;
+    };
+
+    template<typename FX, typename RArgs, typename Args=remove_consts<RArgs>, class=std::__void_t<>>
+    struct __FX_exists_error_NO_MATCH: std::false_type { 
+        using args = Args;
+    };
+
+    template< typename FX, typename RArgs, typename...As >
+    struct __FX_exists_error_NO_MATCH<FX, RArgs, std::tuple<As...>, std::__void_t<decltype( std::declval<FX>().error_NO_MATCH(std::declval<As>()...) )> >
+        : std::true_type {
+        using args = std::tuple<As...>;
+    };
+
+    template<typename FX, typename RArgs, typename Args=remove_consts<RArgs>, class=std::__void_t<>>
+    struct __FX_exists_error_OOD: std::false_type { 
+        using args = Args;
+    };
+
+    template< typename FX, typename RArgs, typename...As >
+    struct __FX_exists_error_OOD<FX, RArgs, std::tuple<As...>, std::__void_t<decltype( std::declval<FX>().error_OOD(std::declval<As>()...) )> >
+        : std::true_type {
+        using args = std::tuple<As...>;
+    };
+
+
+    template<typename FX, typename Args, class=std::__void_t<>>
+    struct FX_exists_poly_callable : std::false_type { };
+
+    template< typename FX, typename...As >
+    struct FX_exists_poly_callable<FX, std::tuple<As...>, std::__void_t<decltype( std::declval<FX>()(std::declval<As*>()...) )> >
+        : std::true_type { };
+
+    template<typename FX, typename Args, class=std::__void_t<>>
+    struct FX_exists_sig : std::false_type { };
+
+    template< typename FX, typename...As >
+    struct FX_exists_sig<FX, std::tuple<As...>, std::__void_t<decltype( std::declval<typename resolve_signature<typename FX::type>::return_type(FX::*&)(As...)>() = &FX::operator() )> >
+        : std::true_type { 
+        using type = decltype( std::declval<typename resolve_signature<typename FX::type>::return_type(FX::*&)(As...)>() );
+    };
+
+}//end-namespace FX_utils ////////////////////////////////////////////////////////
+
+
+
+/*---------------------------------------------------------------------
+    runtime errors
+*/
+struct __void_return_t{};
+
+
+
+template<typename __return_type, typename __MF>
+struct FxCaller
+{
+    using Return_type = __return_type;
+
+
+    template<typename Fx, typename...Args>
+    static
+    Return_type call(Fx *fx, Args&&...args) {
+        return (*fx)(std::forward<Args>(args)...);
+    }
+
+
+    template<typename Fx, typename...Args>
+    static
+    Return_type
+    error_OOD(Fx *fx, Args&&...args)    //out-of-domain
+    {
+        return fx->error_OOD(std::forward<Args>(args)...);
+    }
+
+    template<typename Fx, typename...Args>
+    static
+    Return_type
+    error_NO_MATCH(Fx *fx, Args&&...args)   //no mathcing functions found
+    {
+        return fx->error_NO_MATCH(std::forward<Args>(args)...);
+    }
+};
+
+
+
+
+template<typename __MF>
+struct FxCaller<void,__MF>
+{
+    using Return_type = __void_return_t;
+
+
+    template<typename Fx, typename...Args>
+    static
+    Return_type call(Fx *fx, Args&&...args) {
+        (*fx)(std::forward<Args>(args)...);
+
+        return Return_type{};
+    }
+
+
+    template<typename Fx, typename...Args>
+    static
+    Return_type
+    error_OOD(Fx *fx, Args&&...args)    //out-of-domain
+    {
+        fx->error_OOD(std::forward<Args>(args)...);
+
+        return Return_type{};
+    }
+
+    template<typename Fx, typename...Args>
+    static
+    Return_type
+    error_NO_MATCH(Fx *fx, Args&&...args)   //no mathcing functions found
+    {
+        fx->error_NO_MATCH(std::forward<Args>(args)...);
+
+        return Return_type{};
+    }
+};
+
+
+
+template<typename __MF, bool=FX_utils::__FX_exists_error_OOD<typename __MF::FX, typename __MF::VSig::arg_types>::value>
+struct _Error_OOD_Helper;
+
+template<typename __MF>
+struct _Error_OOD_Helper<__MF,false>
+{
+    template<typename...Args>
+    static auto call(typename __MF::FX *fx, Args&&...args) {
+        return __MF::__error_OOD_default(fx, std::forward<Args>(args)...);
+    }
+};
+
+template<typename __MF>
+struct _Error_OOD_Helper<__MF,true>
+{
+    template<typename...Args>
+    static auto call(typename __MF::FX *fx, Args&&...args) {
+        return FxCaller<typename __MF::VSig::return_type,__MF>::error_OOD(fx, std::forward<Args>(args)...);
+    }
+};
+
+
+template<typename __MF, bool=FX_utils::__FX_exists_error_NO_MATCH<typename __MF::FX, typename __MF::VSig::arg_types>::value>
+struct _Error_NO_MATCH_Helper;
+
+template<typename __MF>
+struct _Error_NO_MATCH_Helper<__MF,false>
+{
+    template<typename...Args>
+    static auto call(typename __MF::FX *fx, Args&&...args) {
+        return __MF::__error_NO_MATCH_default(fx, std::forward<Args>(args)...);
+    }
+};
+
+template<typename __MF>
+struct _Error_NO_MATCH_Helper<__MF,true>
+{
+    template<typename...Args>
+    static auto call(typename __MF::FX *fx, Args&&...args) {
+        return FxCaller<typename __MF::VSig::return_type,__MF>::error_NO_MATCH(fx, std::forward<Args>(args)...);
+    }
+};
+
+}//end-namespace vane_detail /////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+//exceptions
+namespace multifunc_error {
+
+    struct multifunc_error : std::runtime_error {
+        multifunc_error(const char *m="multi-func error") : runtime_error(m) {}
+    };
+
+    struct invalid_call : multifunc_error {
+        invalid_call(const char *m="multi-func error: invalid function call: no matching function or ambiguous call") 
+            : multifunc_error(m) {}
+    };
+
+    struct invalid_argument_type : invalid_call {
+        invalid_argument_type(const char *m="multi-func error: invalid argument type: out of the type-domain")
+            : invalid_call(m) {}
+    };
+
+    struct multi_inheritance_detected : multifunc_error {
+        multi_inheritance_detected (const char *m="multi-func error: multi-inheritance detected")
+            : multifunc_error(m) {}
+    };
+}
+
+
+namespace vane_detail {///////////////////////////////////////////////////////////////////////////////////////////
+
+struct __vane_error {
+    static __attribute__((noreturn)) __attribute__((noinline)) 
+    void __throw_OOD() {
+        throw multifunc_error::invalid_argument_type();
+    }
+
+    static __attribute__((noreturn)) __attribute__((noinline)) 
+    void __throw_NO_MATCH() {
+        throw multifunc_error::invalid_call();
+    }
+
+    static __attribute__((noreturn)) __attribute__((noinline)) 
+    void __throw_MI_detected() {
+        throw multifunc_error::multi_inheritance_detected();
+    }
+};
+
+
+
+inline
+void __throw_OOD() {
+    __vane_error::__throw_OOD();
+}
+
+inline
+void __throw_NO_MATCH() {
+    __vane_error::__throw_NO_MATCH();
+}
+
+inline
+void __throw_MI_detected() {
+    __vane_error::__throw_MI_detected();
+}
+
+}//end-namespace vane_detail /////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+/*---------------------------------------------------------------------
+    vtypemap<>'s
+*/
+
+template<typename __T>
+void vector_validate_at(std::vector<__T> &v, size_t index, const __T &value) {
+    if( v.size() <= index ) 
+        v.resize(index+1, value);
+}
+
+namespace vane_detail {///////////////////////////////////////////////////////////////////////////////////////////
+
+template<typename __TypeMap, bool __MI>
+struct __VType_base_caster;
+
+
+//___MI
+template<typename __TypeMap>
+struct __VType_base_caster<__TypeMap, true>
+{
+    template<typename __T, typename __BaseType> 
+    static __T *cast(vtype::vtypeid_type vid, const __BaseType *__s)
+    {
+        static_assert(std::is_base_of<typename __TypeMap::base_type, __BaseType>::value, "");
+        static_assert( 0 <= tuple_index<std::remove_const_t<__T>,typename __TypeMap::Domain>, "argument type out of the domain");
+
+        __TypeMap::init();
+
+        return  (__T*)((char*)__s + __TypeMap::get()._castmap[vid][tuple_index<std::remove_const_t<__T>,typename __TypeMap::Domain>]);
+    }
+};
+
+
+//___SI
+template<typename __TypeMap>
+struct __VType_base_caster<__TypeMap, false>
+{
+    template<typename __T, typename __BaseType>
+    static __T *cast(vtype::vtypeid_type vid, const __BaseType *__s) {
+        static_assert(std::is_base_of<typename __TypeMap::base_type, __BaseType>::value, "");
+
+        __TypeMap::init();
+
+        return  vane::get<__T>(const_cast<std::remove_const_t<__BaseType>*>(__s));
+    }
+};
+
+
+
 
 /////////////////////////////////////////////////////////////////////////////////////
-	template<typename To,typename From>
-	const void *__dynamic_cast(const void *p) {
-		return dynamic_cast<const To*>(static_cast<const From*>(p));
-	}
-
-	struct TypeInfoEntry {
-		const void *(*cast)(const void*);
-		const std::type_info *type_info;
-	};
-
-	template<typename Base, typename T, typename List>
-	constexpr TypeInfoEntry build_typeInfoEntry() {
-		return TypeInfoEntry {
-			&__dynamic_cast<T,Base>,
-			&typeid(T)
-		};
-	}
-
-
-	template<typename WholeSet, typename Base>
-	struct __build_tyepInfoList;
-
-	template<typename Base, typename...T>
-	struct __build_tyepInfoList<std::tuple<T...>,Base> {
-		static constexpr std::array<TypeInfoEntry, sizeof...(T)> build() {
-			return std::array<TypeInfoEntry, sizeof...(T)> {
-				build_typeInfoEntry<Base,T,std::tuple<T...>>()...
-			};
-		}
-	};
-
-template<typename WholeSet, typename Base>
-constexpr std::array<TypeInfoEntry, std::tuple_size<WholeSet>::value>
-build_tyepInfoList() {
-	return __build_tyepInfoList<WholeSet,Base>::build();
-}
-
-
-/////////////////////////////////////////////////////////////////////////////////
-template<typename Bag, typename Index>
-bool find_closest_base(const void *x, const Node<Index> *node, Bag &bag, const TypeInfoEntry *entry) {
-	assert( node );	//if( ! node ) return false;
-	assert( node->branches );
-	assert( node->subtrees );
-
-	bool found = false;
-	for(int i=0; i<node->n ;++i) {
-		const Index *branch = node->branches[i];
-		assert( branch );
-		assert( 0 < branch[-1] );	//branch length;
-
-		if( entry[branch[0]].cast(x) ) {
-			found = true;
-			auto subtree = node->subtrees[i];
-			if( !subtree || ! find_closest_base(x, subtree, bag, entry) )  {
-				int j = branch[-1];	//blen
-				while( ! entry[branch[--j]].cast(x) )
-					;
-
-				if( end(bag) == find(begin(bag), end(bag), branch[j]) ) {
-					bag.push_back(branch[j]);
-				}
-			}
-		}
-	}
-
-	return found;
-}
-
-
-/////////////////////////////////////////////////////////////////////////////////////////
-	namespace _details {
-		template<typename T, typename Elements>
-		struct __nearest_bases;
-
-				template<typename SubTree, size_t I, typename List, typename Tree, typename T>
-				struct mapper_nearest_from_subtree {
-					using branch       = typename std::tuple_element<I,typename Tree::branches>::type;
-					using from_subtree = typename __nearest_bases<T, SubTree>::type;
-					using map = 
-						std::conditional_t<
-							!!std::tuple_size<from_subtree>::value,
-							from_subtree,
-							std::tuple< typename std::tuple_element<std::tuple_size<branch>::value-1, branch>::type >
-						>;
-				};
-		template<typename T, typename Tree>
-		struct __nearest_bases {
-			using type = tuple_cat_t<
-				tuple_map<typename Tree::subtrees, mapper_nearest_from_subtree, Tree,T>
-			>;
-		};
-	}
-
-template<typename T, typename Elements>
-struct nearest_bases {
-	using type  =
-		std::conditional_t<
-			0<=tuple_index<T,Elements,false>,
-			std::tuple<T>,
-			tuple_uniq_t<
-				typename _details::__nearest_bases<
-					T,
-					inheritance_tree<tuple_map<Elements, tuple_filters::is_base_of, T>>
-				>::type
-			>
-		>;
-};
-
-template<typename T, typename Elements>
-struct nearest_bases_indexed {
-	using type = tuple_indices<nearest_bases<T,Elements>,Elements>;
-};
-
-}// namespace class_tree////////////////////////////////////////////////////////////////////////////
-
-
-
-/*-----------------------------------------------------------------------------------------------
-	FX utils
-*/
-	template<typename FX, typename Args, class=std::__void_t<>>
-	struct __FX_exists_callable : std::false_type { };
-
-	template< typename FX, typename...As >
-	struct __FX_exists_callable<FX, std::tuple<As...>, std::__void_t<decltype( std::declval<FX>()(std::declval<As>()...) )> >
-		: std::true_type { };
-
-
-	//////////////////////////////////////
-	template<typename FX, typename Args, class=std::__void_t<>>
-	struct FX_exists_sig : std::false_type { };
-
-	template< typename FX, typename...As >
-	struct FX_exists_sig<FX, std::tuple<As...>, std::__void_t<decltype( std::declval<void(FX::*&)(As*...)>() = &FX::operator() )> >
-		: std::true_type { };
-
-
-	//////////////////////////////////////
-	template<typename Argv, typename Sig, typename=std::__void_t<>>
-	struct is_argv_callable: std::false_type {
-		using type = std::tuple<>;
-	};
-
-	template<typename...ArgI, typename...ParamI>
-	struct is_argv_callable<std::tuple<ArgI...>, std::tuple<ParamI...>, std::__void_t<decltype( std::declval<void(*)(ParamI*...)>()( std::declval<ArgI*>()...) )> > : std::true_type {
-		using type = std::tuple< std::tuple<ParamI...> >;
-	};
-
-
-namespace tuple_filters {
-	template<typename T, size_t I, typename Tuple, typename FX>
-		struct filter_FX_exists: FX_exists_sig<FX, T> {};
-
-	template<typename T, size_t I, typename Tuple, typename Order>
-		struct mapper_sort { using map = std::tuple< tuple_sort_t<T, Order> >; };
-
-	template<typename T, size_t I, typename Tuple, typename Param=std::enable_if< (1>tuple_count_v<T,Tuple>) >>
-		struct filter_dup : std::integral_constant<int, 1<tuple_count_v<T,Tuple>> {
-			static constexpr int error(){ static_assert(0==tuple_count_v<T,Tuple>,"FX_Sigs..........");return 1;}
-		};
-}
-
-
-
-
-//////////////////////////////////////////////////////////////////////////
-//symmetricity support
-	template<typename Args, typename Sigs>
-	struct get_sigs_callable;
-
-	template<typename Args, typename...SigI>
-	struct get_sigs_callable<Args, std::tuple<SigI...> > {
-		using type = tuple_cat_t<typename is_argv_callable<Args,SigI>::type...>;
-	};
-
-
-
-	template<typename Argv, typename Sig>
-	struct is_every_sig_callable;
-
-	template<typename Argv, typename...SigI>
-	struct is_every_sig_callable<Argv, std::tuple<SigI...>> :
-		std::integral_constant<bool, iseq_andAll<iseq<is_argv_callable<Argv,SigI>::value...>>> { 
-	};
-
-	template<typename ArgsSet, typename Sig>
-	struct is_every_argv_callable;
-
-	template<typename...ArgsI, typename Sig>
-	struct is_every_argv_callable<std::tuple<ArgsI...>, Sig> :
-		std::integral_constant<bool, iseq_andAll<iseq<is_argv_callable<ArgsI,Sig>::value...>>> { 
-	};
-
-
-/////////////////////////////////////////////////////
-
-	template<typename Argv, size_t I, typename Sigs>
-	struct __filter_all_sigs_callable
-		: std::integral_constant<bool, is_every_sig_callable<Argv, Sigs>::value> { };
-
-	template<typename Sigs>
-	using get_sigs_bestMatch = tuple_map<Sigs, __filter_all_sigs_callable>;
-
-	/////////////////////////////////////////////////////
-	template<typename Argv, size_t I, typename Sigs>
-		struct _reduce_sigs_filter;
-
-	template<typename Argv, size_t I, typename...SigI>
-		struct _reduce_sigs_filter<Argv, I, std::tuple<SigI...>>
-			: std::integral_constant<bool, (1>=iseq_sum<iseq<is_argv_callable<SigI,Argv>::value...>>::value)> { };
-
-	template <typename Sigs>
-	using reduce_sigs = tuple_map<Sigs, _reduce_sigs_filter>;
-
-
-///////////////////////////////////////////////////////////////////
-
-	template<typename KT, typename AI, typename TI, typename OP, typename Seq>
-	struct __mkey_index_lookup;
-
-	template<typename KT, typename AI, typename TI, typename OP, size_t...I>
-	struct __mkey_index_lookup<KT,AI, TI, OP, std::integer_sequence<size_t,I...>> {
-#ifdef	__clang__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunsequenced"
-#endif
-		static int get_indices(const KT &kt,  AI &ai, TI &ti, OP reduce, int sum) {
-			std::make_tuple( (sum = reduce(sum, ti[I]=kt[I][ai[I]]))... );
-			return sum;
-		}
-	};
-#ifdef	__clang__
-#pragma GCC diagnostic pop
-#endif
-	template<size_t N, typename KT, typename AI, typename TI, typename OP>
-	int visitor_mkey_index_lookup(const KT &kt, AI &ai, TI &ti, OP reduce, int sum) {
-		return __mkey_index_lookup<KT,AI,TI,OP, std::make_index_sequence<N>>::get_indices(kt, ai, ti, reduce, sum);
-	}
-
-///////////////////////////////////////////////////////////////////
-
-	template<typename KT, typename AI, typename TI, typename OP, typename Seq>
-	struct __Mkey_index_lookup;
-#ifdef	__clang__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunsequenced"
-#endif
-	template<typename KT, typename AI, typename TI, typename OP, size_t...I>
-	struct __Mkey_index_lookup<KT,AI, TI, OP, std::integer_sequence<size_t,I...>> {
-		static int get_indices(const KT &kt,  AI &ai, TI &ti, OP reduce, int sum) {
-			std::make_tuple( (
-				std::tuple_element_t<I,KT>::FULL_DOMAINED
-				? 0
-				: ( sum = reduce(sum, ti[I]=std::get<I>(kt)[ai[I]]) )
-			)... );
-
-			return sum;
-		}
-	};
-#ifdef	__clang__
-#pragma GCC diagnostic pop
-#endif
-	template<size_t N, typename KT, typename AI, typename TI, typename OP>
-	int _visitor_mkey_index_lookup(const KT &kt, AI &ai, TI &ti, OP reduce, int sum) {
-		return __Mkey_index_lookup<KT,AI,TI,OP, std::make_index_sequence<N>>::get_indices(kt, ai, ti, reduce, sum);
-	}
-
-
-
-
-/*------------------------------------------------------------------------------------------------
-	assignability
-*/
-
-/*
-	using Set = tuple<A,B,C,D,X,Y>;
-	auto ctable = assignability_table<Set,char>::get_instance();
-*/
-template<typename T, typename Set, typename ET>
-struct __Build_assignability_table_row;
-
-
-template<typename T,typename...Ti,typename ET>
-struct __Build_assignability_table_row<T,std::tuple<Ti...>,ET> {
-	enum { SIZE = std::tuple_size<std::tuple<Ti...>>::value };
-
-	static constexpr
-	std::array<ET,SIZE> get() {
-		return {
-			(std::is_assignable<const Ti*&,const T*>::value)...
-		};
-	}
-};
-
-template<typename Set, typename ET>
-struct __Build_assignability_table;
-
-template<typename...Ti, typename ET>
-struct __Build_assignability_table<std::tuple<Ti...>,ET> {
-	enum { SIZE = std::tuple_size<std::tuple<Ti...>>::value };
-
-	static constexpr
-	multi_array<ET,SIZE,SIZE> get() {
-		return {
-			__Build_assignability_table_row<Ti,std::tuple<Ti...>,ET>::get()...
-		};
-	}
+template<typename __Cell>
+struct _var_castmap_common
+{
+    using castmap_cell_type = __Cell;
+    static_assert(std::is_signed<__Cell>::value, "");
+    enum {
+        _CASTMAP_CELL_UNDEFINED = (__Cell)~(((typename std::make_unsigned_t<__Cell>)-1)>>1), 
+        _CASTMAP_CELL_INVALID   = (__Cell)~(((typename std::make_unsigned_t<__Cell>)-1)>>2),
+    };
+
+    template<typename Entry>
+    static void __build_castmap_row(__Cell *row, int size, const Entry *entries, const void *arg, __Cell invalidValue=_CASTMAP_CELL_INVALID) {
+        for(int i=0; i<size ;++i) {
+            char *c = (char*)(*entries[i].cast)(arg);
+            int diff = c-(char*)arg;
+            row[i] = c ? diff : invalidValue;
+        }
+    }
+
+    template<typename Row , typename TypeInfoList>
+    static void __build_castmap_row(Row &row, const TypeInfoList &list, const void *arg, __Cell invalidValue=_CASTMAP_CELL_INVALID) {
+        __build_castmap_row(&*std::begin(row), row.size(), &*std::begin(list), arg, invalidValue);
+    }
+
+    template<typename Domain, typename Row, typename BaseType>
+    static void __build_castmap_row(Row &row, BaseType *arg) {
+        __build_castmap_row(
+            &*std::begin(row),
+            row.size(),
+            &*std::begin(class_tree::typeInfo_list<Domain, BaseType>::get()),
+            arg
+        );
+    }
 };
 
 
-template<typename T=unsigned>
-struct _Assignability_table {
-	int _size;
-	T *data() const {
-		return reinterpret_cast<T*>(const_cast<_Assignability_table<T>*>(this+1));
-	}
-
-	///////////////////////////////////////////////////
-	template<typename AT>
-	bool is_vector_assignable(int n, const AT *from, const AT *to) const {
-		for(int i=0; i<n ;++i) {
-			if( ! data()[_size*from[i]+to[i]] )
-				return false;
-		}
-		return true;
-	}
-
-	template<typename AT, size_t W>
-	bool is_vector_assignable(const std::array<AT,W> &from, const std::array<AT,W> &to) const {
-		return is_vector_assignable(W, &from[0], &to[0]);
-	}
-
-	template<typename Collection>
-	void reduce_sigs(Collection &v, int width) const {
-		Collection r;
-		copy_if(begin(v),end(v),back_inserter(r),[&v,this,width](auto &x){
-			return ! any_of(begin(v),end(v), [&x,this,width](auto &y){
-				return &x!=&y && this->is_vector_assignable(width, y, x);
-			});
-		});
-		r.swap(v);
-	}
-
-	template<typename AT, size_t W, template<typename,typename>class Collection, template<typename>class Allocator>
-	void reduce_sigs(Collection<std::array<AT,W>*,Allocator<std::array<AT,W>*>> &v) const {
-		reduce_sigs(*reinterpret_cast<Collection<AT*,Allocator<AT*>>*>(&v), W);
-	}
+template<typename __Domain, typename __Arg, bool __isMI=false>
+struct __Check_castmap {
+    template<typename Table, typename EH>
+    static void check(const Table &table, const __Arg *arg, bool &r, EH) {}
 };
-/////////////////////////////////////////////////////////////
 
-template<typename Set, typename T=unsigned char>
-struct assignability_table {
+template<typename __Domain, typename __Arg>
+class __Check_castmap<__Domain, __Arg, false>
+{
+    static void __throw_castmap_check_error() {
+        __throw_MI_detected();
+    }
 
-	template<typename AT>
-	bool is_vector_assignable(int n, const AT *from, const AT *to) const {
-		return _table.is_vector_assignable(n, from, to);
-	}
+    struct _Check1 {
+        template<typename T, typename Cell>
+        static
+        void _check1(Cell cell, const __Arg *arg) {
+            if( cell != _var_castmap_common<Cell>::_CASTMAP_CELL_INVALID ) {
+                if( ((char*)get<T>(const_cast<__Arg*>(arg)) - (char*)arg) != cell )
+                    __throw_castmap_check_error();
+            }
+        }
+    };
 
-	template<typename AT, size_t W>
-	bool is_vector_assignable(const std::array<AT,W> &from, const std::array<AT,W> &to) const {
-		return _table.is_vector_assignable(W, &from[0], &to[0]);
-	}
+    template<typename Table, size_t...Is>
+    static void check(const Table &table, const __Arg *arg,  std::index_sequence<Is...>) {
+        std::make_tuple((_Check1::template _check1<std::tuple_element_t<Is,__Domain>>(table[Is], arg),0)...);
+    }
 
-	template<typename Collection>
-	void reduce_sigs(Collection &v, int width) const {
-		_table.reduce_sigs(v, width);
-	}
+public:
 
-	template<typename AT, size_t W, template<typename,typename>class Collection, template<typename>class Allocator>
-	void reduce_sigs(Collection<std::array<AT,W>*,Allocator<std::array<AT,W>*>> &v) const {
-		_table.reduce_sigs(v);
-	}
+    template<typename Table>
+    static void check(const Table &table, const __Arg *arg) {
+        check(table, arg, std::make_index_sequence<std::tuple_size<__Domain>::value>());
+    }
 
-	void print(std::ostream &os = std::cout) const {
-		_table.print(os);
-	}
-
-	static constexpr assignability_table<Set,T> get_instance() {
-		return {
-			{std::tuple_size<Set>::value},
-			__Build_assignability_table<Set,T>::get()
-		};
-	}
+};
 
 
-	enum { SIZE = std::tuple_size<Set>::value };
 
-	_Assignability_table<T>		_table;
-	multi_array<T,SIZE,SIZE>	_data;
+//////////////////////////////////////////////////////////////////
+template<typename __Domain, typename __BaseType, bool __MI>
+struct __VTypemap_typemap_base
+{
+public:
+    using typemap_cell_type = int;
+    std::vector<typemap_cell_type>  _typemap;
+    std::vector<typemap_cell_type>  _multimap;
+
+public:
+    enum {
+        _TYPEMAP_CELL_UNDEFINED     = (typemap_cell_type)0,
+
+        _MULTIMAP_CELL_UNDEFINED    = (typemap_cell_type)-1,
+        _MULTIMAP_CELL_INVALID      = (typemap_cell_type)~(((typename std::make_unsigned_t<typemap_cell_type>)-1)>>1),
+    };
+
+public:
+    static unsigned make_type_index(unsigned c) { return  c; }
+
+    int _get_multi_index(const __BaseType *arg) {
+        return this->_multimap[ arg->_vtypeid ];
+    }
+
+protected:
+    void init_typemap(int vid) {
+        vector_validate_at(_typemap,  vid, (typemap_cell_type)_TYPEMAP_CELL_UNDEFINED);
+        vector_validate_at(_multimap, vid, (typemap_cell_type)_MULTIMAP_CELL_UNDEFINED);
+    }
+
+    __VTypemap_typemap_base() {
+        _MF_init::add_initor([this]{ this->init_typemap(__BaseType::__vtypeid_last); });
+    }
+};
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+template<typename __Domain, typename __BaseType, bool __MI>
+struct _VTypemap_vtype_typemap;
+
+
+
+//MI
+template<typename __Domain, typename __BaseType>
+struct _VTypemap_vtype_typemap<__Domain, __BaseType, true>
+    :  __VTypemap_typemap_base<__Domain, __BaseType, true>
+{
+    enum { __isMI = true };
+
+    auto _get_type_index(const __BaseType *arg) {
+        assert( arg );
+        assert( arg->vtypeid() < this->_typemap.size() );
+        return this->_typemap[arg->vtypeid()];
+    }
+    auto _get_type_index(const __BaseType &arg) {
+        assert( arg.vtypeid() < this->_typemap.size() );
+        return this->_typemap[arg.vtypeid()];
+    }
+
+
+    template<typename CastmapRow>
+    int update_typemap(int vid, const __BaseType *arg, const CastmapRow &castmap)
+    {
+        static_assert( std::tuple_size<CastmapRow>::value == std::tuple_size<__Domain>::value, "");
+        assert( vid == arg->vtypeid() );
+        assert( vid < this->_typemap.size()  );
+        assert( vid < this->_multimap.size() );
+
+        int mix = this->_multimap[vid];
+        if( mix != this->_MULTIMAP_CELL_UNDEFINED )
+        {
+            return mix;
+        }
+
+        int bases[std::tuple_size<__Domain>::value];
+
+        int bases_cnt = drtti::find_closest_bases_from_castmap<__Domain>(castmap, bases, _var_castmap_common<std::remove_reference_t<decltype(castmap[0])>>::_CASTMAP_CELL_INVALID);    //TODO:...
+        if( bases_cnt == 0 ) {
+            this->_multimap[vid] = mix = this->_MULTIMAP_CELL_INVALID;
+        }
+        else if( bases_cnt == 1 ) {
+            this-> _typemap[vid] = bases[0]+1;
+            this->_multimap[vid] = mix = 0;
+        }
+        else {
+            this-> _typemap[vid] = this->_TYPEMAP_CELL_UNDEFINED;
+            this->_multimap[vid] = mix = vid;
+        }
+
+        return mix;
+    }
+};//end-struct
+
+
+
+//SI
+template<typename __Domain, typename __BaseType>
+struct _VTypemap_vtype_typemap<__Domain, __BaseType, false>
+    :  __VTypemap_typemap_base<__Domain, __BaseType, false>
+{
+    enum { __isMI = false };
+
+    auto _get_type_index(const __BaseType *arg) {
+        assert( arg );
+        assert( arg->vtypeid() < this->_typemap.size() );
+        return this->_typemap[arg->vtypeid()];
+    }
+    auto _get_type_index(const __BaseType &arg) {
+        assert( arg.vtypeid() < this->_typemap.size() );
+        return this->_typemap[arg.vtypeid()];
+    }
+
+
+    template<typename CastmapRow>
+    int update_typemap(int vid, const __BaseType *arg, const CastmapRow &castmap)
+    {
+        static_assert( std::tuple_size<CastmapRow>::value == std::tuple_size<__Domain>::value, "");
+
+        assert( vid == arg->vtypeid() );
+        assert( vid < this->_typemap.size()  );
+        assert( vid < this->_multimap.size() );
+
+        int mix = this->_multimap[vid];
+        if( mix != this->_MULTIMAP_CELL_UNDEFINED ) //-1
+        {
+            return mix;
+        }
+
+        
+
+        static_assert( std::is_same<decltype(castmap[0]+0),int>::value, "");
+        int bases[std::tuple_size<__Domain>::value];
+
+        int bases_cnt = drtti::find_closest_bases_from_castmap<__Domain>(castmap, bases, _var_castmap_common<std::remove_reference_t<decltype(castmap[0])>>::_CASTMAP_CELL_INVALID);
+        if( bases_cnt == 0 ) {
+            this->_multimap[vid] = mix = this->_MULTIMAP_CELL_INVALID;
+        }
+        else if( bases_cnt == 1 ) {
+            this-> _typemap[vid] = bases[0]+1;
+            this->_multimap[vid] = mix = 0;
+        }
+        else {
+            __throw_MI_detected();
+        }
+
+        return mix;
+    }
+
+};//end-struct
+
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+//___SI
+template<typename __Domain, typename __BaseType, typename __CellType, bool __MI>
+struct _VTypemap_base_castmap
+    : _var_castmap_common<__CellType>
+{
+    using castmap_type = std::array<__Domain,0>;    //dummy
+    using castmap_cell_type = __CellType;
+
+    template<typename CastmapRow>
+    static void check_castmap_row(const __BaseType *arg, CastmapRow &row) {
+        __Check_castmap<__Domain,__BaseType>::check(row, arg);
+    }
 };
 
 
 
 
-/*--------------------------------------------------------------------------------------------------
-	virtual signature
+        template<typename __Castmap, typename InitFunc>
+        void __update_castmap(__Castmap &_castmap, int vid, InitFunc init_row)
+        {
+            using __Cell = typename __Castmap::value_type::value_type;
+            enum {
+                _WIDTH = std::tuple_size<typename __Castmap::value_type>::value,
+                _CASTMAP_CELL_UNDEFINED = (__Cell)_var_castmap_common<__Cell>::_CASTMAP_CELL_UNDEFINED
+            };
+
+            if( vid >= _castmap.size() )
+                _castmap.resize(vid+1, make_array<__Cell, iseq_n<_WIDTH,_CASTMAP_CELL_UNDEFINED>>() );
+
+
+            if( _castmap[vid][0] == _CASTMAP_CELL_UNDEFINED )
+                init_row( _castmap[vid] );
+        }
+
+
+        template<typename __Castmap>
+        auto *__new_castmap_row(__Castmap &_castmap, int vid)
+        {
+            using __Cell = typename __Castmap::value_type::value_type;
+            enum {
+                _WIDTH = std::tuple_size<typename __Castmap::value_type>::value,
+                _CASTMAP_CELL_UNDEFINED = (__Cell)_var_castmap_common<__Cell>::_CASTMAP_CELL_UNDEFINED
+            };
+
+            if( vid >= _castmap.size() )
+                _castmap.resize(vid+1, make_array<__Cell, iseq_n<_WIDTH,_CASTMAP_CELL_UNDEFINED>>() );
+
+            if( _castmap[vid][0] == _CASTMAP_CELL_UNDEFINED ) {
+                return &_castmap[vid];
+            }
+
+            return (decltype(&_castmap[vid]))nullptr;
+        }
+
+
+
+
+//___MI
+template<typename __Domain, typename __BaseType, typename __CellType>
+struct _VTypemap_base_castmap<__Domain, __BaseType, __CellType, true>
+    : _var_castmap_common<__CellType>
+{
+    using Domain    = __Domain;
+    using base_type = __BaseType;
+
+    using castmap_cell_type = __CellType;
+    using castmap_type = std::vector<std::array<castmap_cell_type, std::tuple_size<Domain>::value>>;
+
+    castmap_type  _castmap;
+
+    void update_castmap(int vid, const base_type *arg) {
+        auto *row = __new_castmap_row(_castmap, vid);
+        if( row )
+            this->template __build_castmap_row<Domain>(*row, arg);
+    }
+};
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////
+//poly
+struct _VTypemap_poly_base_typemap
+{
+    using typemap_cell_type = int;
+
+    enum {
+        _TYPEMAP_CELL_UNDEFINED     =  (typemap_cell_type)0,
+
+        _TYPEMAP_CELL_INDEX         =  (typemap_cell_type)0x80000000,
+        _TYPEMAP_CELL_MULTI         =  (typemap_cell_type)0xc0000000,
+        _TYPEMAP_CELL_MASK_INDEX    =  (typemap_cell_type)0x0000ffff,
+        _TYPEMAP_CELL_MASK_MULTI    =  (typemap_cell_type)0x3fff0000,
+
+        _TYPEMAP_CELL_INVALID       =  _TYPEMAP_CELL_INDEX,
+    };
+
+
+    static unsigned make_type_index (unsigned c) { assert((c&0xffff0000)==0); return  c      | _TYPEMAP_CELL_INDEX; }
+    static unsigned make_multi_index(unsigned c) { assert((c&0xffff0000)==0); return (c<<16) | _TYPEMAP_CELL_MULTI; }
+
+    static unsigned extract_type_index (unsigned c)  { return  c & _TYPEMAP_CELL_MASK_INDEX;        }
+    static unsigned extract_multi_index(unsigned c)  { return (c & _TYPEMAP_CELL_MASK_MULTI) >> 16; }
+
+};
+
+
+
+
+
+
+template<typename __Domain, typename __BaseType, typename __CellType, bool __MI>
+struct _VTM_base_vtype_MI
+    : _VTypemap_vtype_typemap<__Domain, __BaseType,             __MI>
+    , _VTypemap_base_castmap <__Domain, __BaseType, __CellType, __MI>
+{
+    template<typename BaseType>
+    auto update_maps(int vid, const BaseType *arg)
+    {
+        auto *castrow = __new_castmap_row(this->_castmap, vid);
+        if( castrow )
+            this->template __build_castmap_row<__Domain>(*castrow, arg);
+
+        return this->template update_typemap(vid, arg, this->_castmap[vid]);
+    }
+};
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+template<typename T>
+struct __is_vtype_poly : std::integral_constant<bool, !std::is_base_of<vtype,T>::value && std::is_polymorphic<T>::value> { };
+
+
+
+
+template<typename __Domain, typename __BaseType, bool __MI=false, bool __isPoly=false>
+struct _vtypemap;
+
+
+
+//virt_MI
+template<typename __Domain, typename __BasePoly>
+struct _vtypemap<__Domain, virtual_<__BasePoly>, true, false>
+    : _VTM_base_vtype_MI<__Domain, virtual_<__BasePoly>, int, true>
+{
+private:
+    using _Self  = _vtypemap;
+
+public:
+    using base_type = virtual_<__BasePoly>;
+    using Domain    = __Domain;
+    enum { __isMI = true };
+
+    using castmap_cell_type = typename _VTypemap_base_castmap<__Domain, virtual_<__BasePoly>, int, true>::castmap_cell_type;
+
+public:
+
+    static void  *init() { return 0 ? &__instance : nullptr; }
+    static _Self &get()  { return __instance; }
+
+
+    int get_multi_index(const base_type *arg) const {
+        return get()._get_multi_index( arg );
+    }
+
+
+    static auto get_type_index(const base_type *arg) {
+        return get()._get_type_index( arg );
+    }
+    static auto get_type_index(const base_type &arg) {
+        return get()._get_type_index( arg );
+    }
+
+
+    template<typename T>
+    static T *cast(vtype::vtypeid_type vid, const base_type *__s) {
+
+        return  (T*)((char*)__s + get()._castmap[vid][tuple_index<std::remove_const_t<T>,Domain>]);
+    }
+
+
+private:
+    static _Self  __instance;
+};
+
+template<typename __Domain, typename __BasePoly>
+_vtypemap<__Domain, virtual_<__BasePoly>, true, false>  _vtypemap<__Domain, virtual_<__BasePoly>, true, false>::__instance;
+
+
+
+
+
+template<typename __Domain, typename __BaseType, typename __CellType, bool __MI>
+struct _VTM_base_vtype_SI
+    : _VTypemap_vtype_typemap<__Domain, __BaseType,             __MI>
+    , _VTypemap_base_castmap <__Domain, __BaseType, __CellType, __MI>
+{
+    using castmap_cell_type = typename _VTypemap_base_castmap <__Domain, __BaseType, __CellType, __MI>::castmap_cell_type;
+
+    template<typename BaseType>
+    auto update_maps(int vid, const BaseType *arg)
+    {
+        std::array<castmap_cell_type, std::tuple_size<__Domain>::value>  row;
+        this->template __build_castmap_row<__Domain>(row, arg);
+        this->template check_castmap_row(arg, row);
+        return this->template update_typemap(vid, arg, row);
+    }
+};
+
+
+
+//virt-SI
+template<typename __Domain, typename __BasePoly>
+struct _vtypemap<__Domain, virtual_<__BasePoly>, false, false>
+    : _VTM_base_vtype_SI<__Domain, virtual_<__BasePoly>, int, false>
+    , public __VType_base_caster<_vtypemap<__Domain, virtual_<__BasePoly>, false, false>, false>
+{
+private:
+    using _Self  = _vtypemap<__Domain, virtual_<__BasePoly>, false, false>;
+
+public:
+    using base_type = virtual_<__BasePoly>;
+    using base_type_poly = __BasePoly;
+    using Domain    = __Domain;
+    enum { __isMI = false };
+
+    using typename _VTypemap_base_castmap<__Domain, base_type, int, false>::castmap_type;
+    using __VType_base_caster<_vtypemap<__Domain, base_type, false, false>, false>::cast;
+
+
+    static void *init() { return false ? &__instance : nullptr; }
+
+    static _Self  &get() { return __instance; }
+
+    static auto get_type_index(const base_type *arg) {
+        assert( arg );
+        return get()._get_type_index(arg);
+    }
+    static auto get_type_index(const base_type &arg) {
+        return get()._get_type_index(arg);
+    }
+
+
+private: ////////////////////////////////////////////////////////////////////////
+    static _Self  __instance;
+};
+
+template<typename __Domain, typename __BasePoly>
+_vtypemap<__Domain, virtual_<__BasePoly>, false, false> _vtypemap<__Domain, virtual_<__BasePoly>, false, false>::__instance;
+
+
+
+
+
+template<typename __D, size_t, typename, typename __Var>
+struct ___Var_adjust_domain {
+    using map = typename std::tuple<std::conditional_t<std::is_class<__D>::value, __D, typename __Var::template of<__D> >>;
+};
+
+
+
+//MI
+template<typename __Domain, typename...__Tags>
+struct _vtypemap<__Domain, var<__Tags...>, true, false>
+    : _VTM_base_vtype_MI<type_map<__Domain, ___Var_adjust_domain, var<__Tags...>>, var<__Tags...>, int, true>
+    , __VType_base_caster<_vtypemap<__Domain, var<__Tags...>, true, false>, true>
+{
+private:
+    using _Self  = _vtypemap;
+
+public:
+    using base_type = var<__Tags...>;
+    using Domain    = type_map<__Domain, ___Var_adjust_domain, base_type>;
+    enum { __isMI = true };
+
+    using castmap_cell_type = typename _VTypemap_base_castmap<Domain, var<__Tags...>, int, true>::castmap_cell_type;
+
+
+    static int get_multi_index(const base_type *arg) {
+        return get()._get_multi_index(arg);
+    }
+
+    static auto get_type_index(const base_type *arg) {
+        return get()._get_type_index(arg);
+    }
+    static auto get_type_index(const base_type &arg) {
+        return get()._get_type_index(arg);
+    }
+
+
+    static void *init() { return false ? &__instance : nullptr; }
+    static _Self &get() { return __instance; }
+
+private:
+    static _Self  __instance;
+};
+
+template<typename __Domain, typename...__Tags>
+_vtypemap<__Domain, var<__Tags...>, true, false> _vtypemap<__Domain, var<__Tags...>, true, false>::__instance;
+
+
+
+
+
+
+//SI
+template<typename __Domain, typename...__Tags>
+struct _vtypemap<__Domain, var<__Tags...>, false, false>
+    : _VTM_base_vtype_SI<type_map<__Domain, ___Var_adjust_domain, var<__Tags...>>, var<__Tags...>, int, false>
+{
+private:
+    using _Self  = _vtypemap<__Domain, var<__Tags...>, false, false>;
+
+public:
+    using base_type = var<__Tags...>;
+    using Domain    = type_map<__Domain, ___Var_adjust_domain, base_type>;
+    enum { __isMI = false };
+
+
+    static void  *init() { return false ? &__instance : nullptr; }  //static_init
+    static _Self &get()  { return __instance; }
+
+    static auto get_type_index(const base_type *arg) {  //typemap_cell_type
+        return get()._get_type_index(arg);
+    }
+    static auto get_type_index(const base_type &arg) {  //typemap_cell_type
+        return get()._get_type_index(arg);
+    }
+
+
+private:
+    static _Self  __instance;
+};
+
+template<typename __Domain, typename...__Tags>
+_vtypemap<__Domain, var<__Tags...>, false, false> _vtypemap<__Domain, var<__Tags...>, false, false>::__instance;
+
+
+
+
+
+template<typename __Domain, typename __BaseType, typename __CellType, bool __MI>
+using _VTypemap_poly_base_castmap= _VTypemap_base_castmap<__Domain, __BaseType, __CellType, __MI>;
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+template<typename __Domain, typename __BaseType, bool __MI=false, typename __MapType=std::unordered_map<const std::type_info*,unsigned>>
+struct _vtypemap_poly;
+
+
+//poly_SI//////////////////////////////////////////////////////////////////////////////////
+template<typename __Domain, typename __BaseType, typename __MapType>
+struct _vtypemap_poly<__Domain, __BaseType, false, __MapType>
+    : _VTypemap_poly_base_typemap
+    , _VTypemap_poly_base_castmap<__Domain, __BaseType, int, false>
+{
+public:
+    __MapType   _typemap;
+private:
+    using _Self = _vtypemap_poly<__Domain, __BaseType, false, __MapType>;
+
+public: 
+    using Domain    = __Domain;
+    using base_type = __BaseType;
+    enum { __isMI = false };
+
+    using _VTypemap_poly_base_typemap::extract_type_index;
+
+    static auto get_type_index(const base_type *arg) {
+        assert( arg );
+        return extract_type_index(get()._typemap[&typeid(*arg)]);
+    }
+    static auto get_type_index(const base_type &arg) {
+        return extract_type_index(get()._typemap[&typeid(arg)]);
+    }
+
+    static void *init() { return false ? &__instance : nullptr; }
+
+    static _vtypemap_poly<__Domain, __BaseType, false>  &get() { return __instance; }
+
+
+    template<typename CastmapRow>
+    auto update_typemap(const std::type_info *vid, const base_type *arg, const CastmapRow &castmap)
+    {
+        static_assert( std::tuple_size<CastmapRow>::value == std::tuple_size<__Domain>::value, "");
+
+        assert( vid == &typeid(*arg) );
+        auto tix = this->_typemap[vid];
+
+        if( tix == this->_TYPEMAP_CELL_UNDEFINED ) {
+            static_assert( std::is_same<decltype(castmap[0]+0),int>::value, "");
+            int bases[std::tuple_size<__Domain>::value];
+
+            int bases_cnt = drtti::find_closest_bases_from_castmap<__Domain>(castmap, bases, this->_CASTMAP_CELL_INVALID);
+            if( bases_cnt == 0 ) {
+                _typemap[vid] = tix = this->_TYPEMAP_CELL_INVALID;
+            }
+            else if( bases_cnt == 1 ) {
+                _typemap[vid] = tix = this->make_type_index( bases[0]+1 );
+            }
+            else {
+                __throw_MI_detected();
+            }
+        }
+
+        return tix;
+    }
+
+    auto update_maps(const std::type_info *vid, const base_type *arg)
+    {
+        std::array<int, std::tuple_size<Domain>::value>  row;
+        this->template __build_castmap_row<__Domain>(row, arg);
+        this->template check_castmap_row(arg, row);
+        return this->template update_typemap(vid, arg, row);
+    }
+
+
+    template<typename T>
+    static T *cast(vtype::vtypeid_type vid, const base_type *__s) {
+        static_assert( 0 <= tuple_index<T,Domain>, "argument type out of the domain");
+
+        return vane::get<T>(const_cast<std::remove_const_t<base_type>*>(__s));
+    }
+
+private:
+    static _vtypemap_poly<__Domain, __BaseType, false, __MapType>   __instance;
+
+};
+
+template<typename __Domain, typename __BaseType, typename __MapType>
+_vtypemap_poly<__Domain, __BaseType, false, __MapType>  _vtypemap_poly<__Domain, __BaseType, false, __MapType>::__instance;
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////
+//poly_MI
+template<typename __Domain, typename __BaseType, typename __MapType>
+struct _vtypemap_poly<__Domain, __BaseType, true, __MapType>
+    : _VTypemap_poly_base_typemap
+    , _VTypemap_poly_base_castmap<__Domain, __BaseType, int, true>
+{
+    using Domain    = __Domain;
+    using base_type = __BaseType;
+    enum { __isMI = true };
+private:
+    using _Self = _vtypemap_poly;
+
+public:
+    using typename _VTypemap_poly_base_typemap::typemap_cell_type;
+    std::vector<typemap_cell_type>  _typemap;
+    __MapType                       _vtypemap;
+
+protected:
+    _vtypemap_poly() {  //ctor
+        assert( this == &get() );
+        _typemap.push_back( this->_TYPEMAP_CELL_UNDEFINED );
+        assert( _typemap.size() == 1 );
+    }
+
+public:
+    using _VTypemap_poly_base_typemap::extract_type_index;
+
+    static auto get_type_index(const base_type *arg) {
+        assert( arg );
+
+        return extract_type_index( get()._typemap[ get()._vtypemap[&typeid(*arg)] ] );
+    }
+
+    static auto get_type_index(const base_type &arg)
+    {
+        auto vid = get()._vtypemap[&typeid(arg)];
+        return extract_type_index( get()._typemap[vid] );
+    }
+        static auto get_type_index(const base_type *arg, int &vid) {
+            assert( arg );
+
+            return extract_type_index( get()._typemap[ vid = get()._vtypemap[&typeid(*arg)] ] );
+        }
+
+        static auto get_type_index(const base_type &arg, int &vid) {
+            return extract_type_index( get()._typemap[ vid = get()._vtypemap[&typeid(arg)] ] );
+        }
+
+    static void *init() { return false ? &__instance : nullptr; }
+
+    static _vtypemap_poly<__Domain, __BaseType, true>   &get() { return __instance; }
+
+    using _VTypemap_poly_base_castmap<__Domain, __BaseType, int, true>::update_castmap;
+
+
+protected:
+    template<typename CastmapRow>
+    void _update_typemap(const CastmapRow &castmap)
+    {
+        static_assert( std::tuple_size<CastmapRow>::value == std::tuple_size<__Domain>::value, "");
+
+        _Self::init();
+        unsigned vid = _typemap.size() - 1;
+
+        int bases[std::tuple_size<__Domain>::value];
+
+        int bases_cnt = drtti::find_closest_bases_from_castmap<__Domain>(castmap, bases, this->_CASTMAP_CELL_INVALID);
+        if( bases_cnt == 0 ) {
+            _typemap.back() = this->_TYPEMAP_CELL_INVALID;
+        }
+        else if( bases_cnt == 1 ) {
+            _typemap.back() = this->make_type_index(bases[0]+1);
+        }
+        else {
+            _typemap.back() = this->make_multi_index(vid);
+        }
+    }
+
+public:
+    auto update_maps(const base_type *arg)
+    {
+        _Self::init();
+        auto type_info = &typeid(*arg);
+        auto vid = _vtypemap[type_info];
+        if( vid )
+            return vid;
+
+        vector_validate_at(_typemap, 0, (typemap_cell_type)this->_TYPEMAP_CELL_UNDEFINED);
+
+        vid = _typemap.size();
+
+
+        auto *castrow = __new_castmap_row(this->_castmap, vid);
+        assert( castrow );
+        this->template __build_castmap_row<Domain>(*castrow, arg);
+
+
+        try {
+            _typemap.push_back( this->_TYPEMAP_CELL_INVALID );
+            _update_typemap(*castrow);
+        }
+        catch(...) {
+            _typemap.pop_back();
+            (*castrow)[0] = this->_CASTMAP_CELL_UNDEFINED;
+            throw;
+        }
+        _vtypemap[type_info] = vid;
+
+        return vid;
+    }
+    
+
+    using _VTypemap_poly_base_castmap<__Domain, __BaseType, int, true>::_CASTMAP_CELL_INVALID;
+
+    template<typename T>
+    static T *cast(vtype::vtypeid_type vid, const base_type *__s) {
+        assert( vid < get()._castmap.size() );
+        return  (T*)((char*)__s + get()._castmap[vid][tuple_index<std::remove_const_t<T>,Domain>]);
+    }
+
+private:
+    static _Self  __instance;
+
+};
+
+template<typename __Domain, typename __BaseType, typename __MapType>
+_vtypemap_poly<__Domain, __BaseType, true, __MapType>   _vtypemap_poly<__Domain, __BaseType, true, __MapType>::__instance;
+
+
+
+
+template<typename __Domain, typename __BaseType, bool __MI=false, bool __isPoly=false>
+using vtypemap = _vtypemap<__Domain, std::remove_const_t<__BaseType>, __MI, __isPoly>;
+
+template<typename __Domain, typename __BaseType, bool __MI=false, typename __MapType=std::unordered_map<const std::type_info*,unsigned>>
+using vtypemap_poly = _vtypemap_poly<__Domain, std::remove_const_t<__BaseType>, __MI, __MapType>;
+
+
+}//end-namespace vane_detail /////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+/*---------------------------------------------------------------------
+    virtual signature
 */
 
 
 template<typename...>
-struct _static{};
-
-template<typename...Ts>
-using _domain = std::tuple<Ts...>;
+struct static_{};
 
 
-	template<typename T>
-	struct is_static_arg : std::integral_constant<bool,!basetype_is_polymorphic<T>::value> {
-		using type = std::conditional_t< basetype_is_polymorphic<T>::value, std::tuple<>, std::tuple<T> >;
-	};
-	template<typename...T>
-	struct is_static_arg<_static<T...>>	: std::true_type  { using type = std::tuple<T...>; };
+namespace vane_detail {//////////////////////////////////////////////////////////////////////////
 
-	template<typename T>
-	struct remove_static_tag				: std::false_type { using type = std::tuple<T>;		};
-	template<typename...T>
-	struct remove_static_tag<_static<T...>>	: std::true_type  {  using type = std::tuple<T...>;	};
+template<typename T>
+struct _is_static_arg : std::integral_constant<bool,!basetype_is_polymorphic<T>::value> {
+    using type = std::conditional_t< basetype_is_polymorphic<T>::value, std::tuple<>, std::tuple<T> >;
+};
+template<typename...T>
+struct _is_static_arg<static_<T...>>        : std::true_type  { using type = std::tuple<T...>; };
 
-	///////////////////////////////////////////////////////////////
-	template<typename Arg, size_t I, typename Tuple>
-	struct filter_static_arg : is_static_arg<Arg> { 
-		using map = typename is_static_arg<Arg>::type;
-	};
+template<typename T>
+struct _remove_static_tag                   : std::false_type { using type = std::tuple<T>;     };
+template<typename...T>
+struct _remove_static_tag<static_<T...>>    : std::true_type  { using type = std::tuple<T...>;  };
 
-	template<typename Arg, size_t I, typename Tuple>
-	struct _mapper_remove_static_tag { using map = typename remove_static_tag<Arg>::type; };
+
+template<typename Arg, size_t I, typename Tuple>
+struct filter_static_arg : _is_static_arg<Arg> { 
+    using map = typename _is_static_arg<Arg>::type;
+};
+
+template<typename Arg, size_t I, typename Tuple>
+struct _mapper_remove_static_tag { using map = typename _remove_static_tag<Arg>::type; };
 
 template<typename Args>
-using remove_static_tags = tuple_map<Args, _mapper_remove_static_tag>;
+using _remove_static_tags = type_map<Args, _mapper_remove_static_tag>;
+
+
+
+
+template<typename T>
+struct _remove_virt_tag                 : std::false_type { using type = std::tuple<T>; };
+template<typename T>
+struct _remove_virt_tag<virtual_<T>>    : std::true_type  { using type = std::tuple<T>; };
+
+
+template<typename Arg, size_t I, typename Tuple>
+struct _mapper_remove_virt_tag { using map = typename _remove_virt_tag<Arg>::type; };
+
+template<typename Args>
+using _remove_virt_tags = type_map<Args, _mapper_remove_virt_tag>;
+
 
 template<typename Arg, size_t I, typename Tuple>
 struct _mapper_flag_virtual_arg { 
-	using map = iseq_n< std::tuple_size< typename remove_static_tag<Arg>::type >::value, !is_static_arg<Arg>::value >;
+    using map = iseq_n< std::tuple_size< typename _remove_static_tag<Arg>::type >::value, !_is_static_arg<Arg>::value || basetype_is_base_of<__var,Arg>::value>;    //var----new
 };
+
+
+
+
+template<typename Arg, size_t, typename>
+struct _mapper_flag_polyarg { 
+    using map = iseq_n<std::tuple_size< typename _remove_static_tag<Arg>::type >::value,
+            !_is_static_arg<Arg>::value
+        &&  !is_virt<remove_pointer_or_reference_t<Arg>>::value
+        &&  !is_var <remove_pointer_or_reference_t<Arg>>::value
+        >;
+};
+
+
+template<typename Arg, size_t I, typename Tuple>
+struct _mapper_flag_virt { 
+    using map = iseq_n<std::tuple_size< typename _remove_static_tag<Arg>::type >::value,
+            !_is_static_arg<Arg>::value
+        &&  is_virt<remove_pointer_or_reference_t<Arg>>::value
+        >;
+};
+
+template<typename Arg, size_t I, typename Tuple>
+struct _mapper_flag_var { 
+    using map = iseq_n<std::tuple_size< typename _remove_static_tag<Arg>::type >::value,
+            !_is_static_arg<Arg>::value
+        &&  is_var<remove_pointer_or_reference_t<Arg>>::value
+        >;
+};
+
+template<typename Arg, size_t I, typename Tuple>
+struct _mapper_flag_const { 
+    using map = iseq_n<std::tuple_size< typename _remove_static_tag<Arg>::type >::value,
+            !_is_static_arg<Arg>::value
+        &&  std::is_const<remove_pointer_or_reference_t<Arg>>::value
+        >;
+};
+
+
+
+
+//////////////////////////////////////////////////////////
+template<typename Arg>
+struct __map_remove_base_const {
+    using map = std::tuple< remove_base_const_t<Arg> >;
+};
+
+template<typename Arg, size_t, typename>
+struct _filter_is_polyarg
+    : std::__not_<std::__or_<
+        is_virt<remove_pointer_or_reference_t<Arg>>,
+        is_var <remove_pointer_or_reference_t<Arg>> 
+       >>
+    , __map_remove_base_const<Arg> { };
+
+template<typename Arg, size_t I, typename>
+struct _filter_is_virt
+    : is_virt<remove_pointer_or_reference_t<Arg>>
+    , __map_remove_base_const<Arg> { };
+
+template<typename Arg, size_t, typename>
+struct _filter_is_var
+    : is_var<remove_pointer_or_reference_t<Arg>>
+    , __map_remove_base_const<Arg> { };
+
+
+
+
+enum { VSIG_ARGTYPE_NONV=0, VSIG_ARGTYPE_POLY, VSIG_ARGTYPE_VIRT, VSIG_ARGTYPE_VAR};
+    template<typename Arg, size_t, typename>
+    struct _mapper_ARGTYPE { 
+        using map = iseq_n<std::tuple_size< typename _remove_static_tag<Arg>::type >::value,
+                is_virt<remove_pointer_or_reference_t<Arg>>::value  ?  VSIG_ARGTYPE_VIRT :
+                is_var <remove_pointer_or_reference_t<Arg>>::value  ?  VSIG_ARGTYPE_VAR  :
+                ! _is_static_arg<Arg>::value                        ?  VSIG_ARGTYPE_POLY :
+                                                                       VSIG_ARGTYPE_NONV
+            >;
+    };
+
+
 
 
 
 //////////////////////////////////////////////////////////////////////////////////
 template<typename _Sig>
 struct resolve_virtual_signature {
-	using raw_arg_types   = typename resolve_signature<_Sig>::arg_types;
+public:
 
-	using static_arg_types   = typename tuple_map2<raw_arg_types, filter_static_arg>::type;
-	using virtual_arg_types  = typename tuple_map2<raw_arg_types, filter_static_arg>::complement;
+private:
+public:
+    using raw_arg_types   = typename resolve_signature<_Sig>::arg_types;
 
-	using return_type = typename resolve_signature<_Sig>::return_type;
-	using arg_types   = remove_static_tags<raw_arg_types>;
-	using plain_signature   = typename make_signature<return_type, arg_types>::type;
-	using virtual_signature = _Sig;
+    using arg_types          = _remove_static_tags<raw_arg_types>;
+    using static_arg_types   = typename type_map2<raw_arg_types, filter_static_arg>::type;
+    using _virtual_arg_types_raw = typename type_map2<raw_arg_types, filter_static_arg>::complement;
+
+    using return_type = typename resolve_signature<_Sig>::return_type;
+    using _Return_type = std::conditional_t<std::is_same<return_type,void>::value, __void_return_t, return_type>;
+
+    using plain_signature   = typename make_signature<return_type, arg_types>::type;
+    using virtual_signature = _Sig;
+
+    using polyarg_types = type_map<_virtual_arg_types_raw, _filter_is_polyarg>;
+    using virt_types    = type_map<_virtual_arg_types_raw, _filter_is_virt>;
+    using var_types     = type_map<_virtual_arg_types_raw, _filter_is_var>;
+
+    using virtual_arg_types  = tuple_cat_t< virt_types, var_types, polyarg_types>;
+
+    using virt_base_types =_remove_virt_tags< remove_pointers_or_references<virt_types>>;
 
 
-	using virtual_flags   = tuple_mapv<raw_arg_types, _mapper_flag_virtual_arg>;
+
+    using virtual_flags   = type_mapv<raw_arg_types, _mapper_flag_virtual_arg>;
+    using polyarg_flags   = type_mapv<raw_arg_types, _mapper_flag_polyarg>;
+    using virt_flags      = type_mapv<raw_arg_types, _mapper_flag_virt>;
+    using var_flags       = type_mapv<raw_arg_types, _mapper_flag_var>;
+    using const_flags     = type_mapv<raw_arg_types, _mapper_flag_const>;
 
 
-	enum {
-		ARGC  = std::tuple_size<arg_types>::value,
-		VARGC = std::tuple_size<virtual_arg_types>::value
-	};
-	/////////////////////////////////////////////////////////////////
+    using NARGTYPEs        = iseq_cat_t<
+        iseq_n<std::tuple_size<virt_types   >::value, VSIG_ARGTYPE_VIRT>,
+        iseq_n<std::tuple_size< var_types   >::value, VSIG_ARGTYPE_VAR>,
+        iseq_n<std::tuple_size<polyarg_types>::value, VSIG_ARGTYPE_POLY>
+    >;
 
 
-	using index_from_normal = iseq_cat_t< 
-		typename iseq_map2<virtual_flags, iseq_filters::filter_nonZero_into_index>::type,
-		typename iseq_map2<virtual_flags, iseq_filters::filter_nonZero_into_index>::complement
-	>;
-	using index_to_normal = iseq_inverse< index_from_normal >;
+    enum {
+        ARGC  = std::tuple_size<arg_types>::value,
+        VARGC = std::tuple_size<virtual_arg_types>::value,
+        ARGC_POLY = std::tuple_size<polyarg_types>::value,
+    };
 
-			template<typename Arg, size_t I, typename Args, typename Indices>
-			struct _map_normalized_arg {
-				using map = std::tuple<
-					std::tuple_element_t<iseq_at<I, Indices>, Args>
-				>;
-			};
-	using normalized_arg_types = tuple_map<arg_types, _map_normalized_arg, index_from_normal>;
+    using index_from_normal = iseq_cat_t< 
+        iseq_map<virt_flags,    iseq_filters::filter_nonZero_into_index>,
+        iseq_map< var_flags,    iseq_filters::filter_nonZero_into_index>,
+        iseq_map<polyarg_flags, iseq_filters::filter_nonZero_into_index>,
+        iseq_map<virtual_flags, iseq_filters::filter_value_into_index, std::integral_constant<int,0>>
+    >;
+
+
+    using index_to_normal = iseq_inverse< index_from_normal >;
+    using normalized_arg_types = tuple_elements<index_from_normal, arg_types>;
 };
 
 
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/*
-	decorate_virtual_args<VSig, Args>
+
+
+template<bool P, typename T>
+struct add_const_if {
+    using type = std::conditional_t<P, std::add_const_t<T>, T>;
+};
+
+template<typename X, size_t I, typename Tuple, typename Virtual_indices, typename ToCastArgs>
+struct _mapper_decorate_virtual_arg {
+    enum { J = iseq_at<I,Virtual_indices> };
+    using _ToCast = std::tuple_element_t<( (J >= std::tuple_size<ToCastArgs>::value) ? 0 : J), ToCastArgs>;
+    using ToCast = typename add_const_if<std::is_const<typename remove_pointer_or_reference<X>::type>::value,_ToCast >::type;
+    using map = std::tuple<
+                    std::conditional_t< (J >= std::tuple_size<ToCastArgs>::value),  X,
+                    std::conditional_t< std::is_pointer<X>::value,          std::add_pointer_t<ToCast>,
+                    std::conditional_t< std::is_lvalue_reference<X>::value, std::add_lvalue_reference_t<ToCast>,
+                    std::conditional_t< std::is_rvalue_reference<X>::value, std::add_rvalue_reference_t<ToCast>,
+                                                                            ToCast
+                    >>>>    
+                >;
+};
+
+template<typename VSig, typename ToCastArgs>
+struct substitute_virtual_args {
+    using type = 
+        type_map<
+            typename VSig::arg_types,
+            _mapper_decorate_virtual_arg, 
+            typename VSig::index_to_normal,
+            ToCastArgs
+        >;
+};
+
+
+
+/*---------------------------------------------------------------------
+    arg_sig
 */
-	template<typename X, size_t I, typename Tuple, typename Virtual_indices, typename ToCastArgs>
-	struct _mapper_decorate_virtual_arg {
-		using ToCast = std::tuple_element_t<(iseq_at<I,Virtual_indices> < 0 ? 0 : iseq_at<I,Virtual_indices>), ToCastArgs>;
-		using map =	std::tuple<
-						std::conditional_t< iseq_at<I,Virtual_indices> < 0,		X,
-						std::conditional_t< std::is_pointer<X>::value,			std::add_pointer_t<ToCast>,
-						std::conditional_t< std::is_lvalue_reference<X>::value,	std::add_lvalue_reference_t<ToCast>,
-						std::conditional_t< std::is_rvalue_reference<X>::value,	std::add_rvalue_reference_t<ToCast>,
-																				ToCast
-						>>>>	
-					>;
-	};
 
-	template<typename VSig, typename ToCastArgs>
-	struct decorate_virtual_args {
-		using type = 
-			tuple_map<
-				typename VSig::arg_types,
-				_mapper_decorate_virtual_arg, 
-				typename iseq_inc<typename iseq_mul< iseq_partial_sum<typename VSig::virtual_flags>, typename VSig::virtual_flags>::type, -1>::type,
-				ToCastArgs
-			>;
-	};
-
-
-
-template<typename T, typename S=T, typename=void>
-struct arg_caster {
-	static
-	std::conditional_t<std::is_rvalue_reference<S>::value,T,T&>
-	forward(remove_pointer_or_reference_t<S> &__s) {
-		return dynamic_cast<std::conditional_t<std::is_rvalue_reference<S>::value,T,T&>>(__s);
-	}
-
-	static
-	remove_pointer_or_reference_t<T>*
-	forward(remove_pointer_or_reference_t<S> *__s) {
-		return dynamic_cast<remove_pointer_or_reference_t<T>*>(__s);
-	}
+struct ArgSigTraits {
+    template<typename Args, typename Sig, typename=std::__void_t<>>
+    struct is_callable: std::false_type {
+        using type = std::tuple<>;
+    };
+    template<typename...ArgI, typename...ParamI>
+    struct is_callable<std::tuple<ArgI...>, std::tuple<ParamI...>, std::__void_t<decltype( std::declval<void(*)(ParamI...)>()( std::declval<ArgI>()...) )> > : std::true_type {
+        using type = std::tuple< std::tuple<ParamI...> >;
+    };
 };
 
+struct PolyArgSigTraits {
+    template<typename Args, typename Sig, typename=std::__void_t<>>
+    struct is_callable: std::false_type {
+        using type = std::tuple<>;
+    };
+    template<typename...ArgI, typename...ParamI>
+    struct is_callable<std::tuple<ArgI...>, std::tuple<ParamI...>, std::__void_t<decltype( std::declval<void(*)(ParamI*...)>()( std::declval<ArgI*>()...) )> > : std::true_type {
+        using type = std::tuple< std::tuple<ParamI...> >;
+    };
+};
+
+
+
+
+
+/*---------------------------------------------------------------------
+    argdef
+*/
+
+
+template<typename T, size_t, typename>
+struct map_topology_sorted {
+    using map = std::tuple<typename topological_sort<T>::type>;
+};
+
+        template<typename T, size_t=0, typename=void>
+        struct is_domain_MI : std::integral_constant<bool, topological_sort<T>::isMI> { };
+
+        template<typename Domains>
+        constexpr bool domains_multi_inherited = tuple_any_of<Domains, is_domain_MI>;
+
+
+template<typename Tuple>
+using __strip_virtual_args = remove_consts<remove_pointers_or_references<Tuple>>;
+
+
+template<typename Domain, size_t I, typename Domains, typename BaseType, typename BaseTypes>
+struct _ArgDef_filter_sameBase : std::is_base_of<BaseType, typename std::tuple_element<I,BaseTypes>::type> { };
+
+
+template<typename T, size_t, typename>
+struct _map_virt_base : std::true_type {
+    using map = std::conditional_t< is_virt<T>::value, std::tuple<__virt>, std::tuple<T> >;
+};
+template<typename T, size_t, typename>
+struct _filter_virt_base : is_virt<T> { };
+
+template<typename V, size_t, typename>
+struct _map_varg_vartypes {
+    using map = std::tuple<typename V::Virtuals>;
+};
+
+template <typename D, typename B>
+struct is_valid_domain : std::true_type {
+    static_assert( is_base_of_all<B,D>, "vane multi-function: domain error: a polymorphic virtual argument must be a subclass of the corresponding argument type of the declared function type in FX" );
+};
+
+template <typename D, typename B>
+struct is_valid_domain<D,virtual_<B>> : std::true_type {
+    static_assert( is_base_of_all<typename virtual_<B>::base_type_poly,D>, "vane multi-func: domain error: in virtual_<Base>::of<T>, T must be derived from Base" );
+};
+
+template <typename D, typename...Tags>
+struct is_valid_domain<D,var<Tags...>> : std::true_type {
+};
+
+template <typename D, size_t I, typename, typename Bs>
+struct filter_valid_domain : is_valid_domain<D,typename std::tuple_element<I,Bs>::type> { 
+    static_assert(!std::is_same<D,std::tuple<>>::value, "vane multi-function: domain error: empty domain");
+};
+
+
+template<typename T,size_t,typename>
+struct _ArgDef_filter_is_poly :  std::integral_constant<bool, !std::is_base_of<vtype,T>::value> {};
+
+
+
+template <typename _VSig, typename __Domains, typename _Domains=type_map<__Domains, map_topology_sorted>>
+struct __ArgDef__
+{
+    using VSig  = _VSig;
+    enum { ARGC = VSig::ARGC };
+private:
+    using _VSig_vo = resolve_virtual_signature<typename make_signature<void, typename VSig::_virtual_arg_types_raw>::type>;
+
+public:
+    using Domains = tuple_elements<typename _VSig_vo::index_from_normal, _Domains>;
+
+    using _BaseTypes_all = __strip_virtual_args< typename VSig::virtual_arg_types >;
+    using BaseTypes_virt = type_map<_BaseTypes_all, _filter_virt_base>;
+    using BaseTypes     = _BaseTypes_all;
+    using basetypes_var  = __strip_virtual_args< typename VSig::var_types>;
+
+
+    static_assert( std::tuple_size<Domains>::value == std::tuple_size<typename VSig::virtual_arg_types>::value, "invalid domain set: size mismatch" );
+    static_assert( tuple_all_of<Domains, filter_valid_domain, _BaseTypes_all>, "invalid domain");
+};
+
+
+
+
+
+/*---------------------------------------------------------------------
+    arg_caster
+*/
+
+template<typename T, typename S, typename=void>
+struct is_static_castable : std::false_type {};
 
 template<typename T, typename S>
-struct arg_caster<T,S,std::__void_t<decltype( static_cast<remove_pointer_or_reference_t<T>*>((remove_pointer_or_reference_t<S>*)nullptr)  )>> {
-	static constexpr
-	std::conditional_t<std::is_rvalue_reference<S>::value, T, T&>
-	forward(remove_pointer_or_reference_t<S> & __s) noexcept {
-		return static_cast<std::conditional_t<std::is_rvalue_reference<S>::value, T, T&>>(__s);
-	}
+struct is_static_castable<T,S,std::__void_t<decltype( static_cast<remove_pointer_or_reference_t<T>*>((remove_pointer_or_reference_t<S>*)nullptr)  )>> : std::true_type{ };
 
-	static constexpr
-	remove_pointer_or_reference_t<T>*
-	forward(remove_pointer_or_reference_t<S> *__s) noexcept {
-		return static_cast<remove_pointer_or_reference_t<T>*>(__s);
-	}
+
+
+
+struct _vtype_category_poly;
+
+template<typename T>
+struct _VType_category {
+    using type = _vtype_category_poly;
+};
+
+template<typename Base>
+struct _VType_category<virtual_<Base>> {
+    using type = __virt;
+};
+
+template<typename...Tags>
+struct _VType_category<var<Tags...>> {
+    using type = __var;
+};
+
+template<typename T>
+using _vtype_category_t = typename _VType_category<std::remove_const_t<T>>::type;
+
+
+
+template<typename T, typename S, typename MF,
+        bool __isMI=MF::__isMI,
+        bool __isToClass = std::is_class<remove_pointer_or_reference_t<T>>::value,
+        typename __VTCat = _vtype_category_t<remove_pointer_or_reference_t<S>>, typename=void>
+struct var_caster;
+
+
+template<typename T, typename S, typename __MF, bool __MI, typename Dummy>
+class var_caster<T, S, __MF, __MI, true, _vtype_category_poly, Dummy>
+{
+    static_assert(__MI==true, "");
+
+    using TT = remove_pointer_or_reference_t<T>;
+    using SS = remove_pointer_or_reference_t<S>;
+public:
+
+
+    template<size_t __I>
+    static
+    std::conditional_t<std::is_rvalue_reference<S>::value,T,T&>
+    forward(SS &__s)
+    {
+        using Domain  = typename std::tuple_element<__I,typename __MF::domains>::type;
+        using TypeMap = vtypemap_poly<Domain, SS, __MI>;
+
+        return static_cast<std::conditional_t<std::is_rvalue_reference<S>::value,T,T&>>(
+                    *TypeMap::template cast<TT>(TypeMap::get()._vtypemap[&typeid(__s)], &__s));
+    }
+
+
+    template<size_t __I>
+    static
+    TT*
+    forward(SS *__s)
+    {
+        using Domain  = typename std::tuple_element<__I,typename __MF::domains>::type;
+        using TypeMap = vtypemap_poly<Domain, SS, __MI>;
+
+        return TypeMap::template cast<TT>(TypeMap::get()._vtypemap[&typeid(*__s)], __s);
+    }
 };
 
 
-#ifdef	__clang__
-	template<typename S>
-	struct arg_caster<S,S> {
-		static constexpr
-		std::conditional_t<std::is_rvalue_reference<S>::value, S, S &>
-		forward(std::remove_reference_t<S> & __s) noexcept {
-			return static_cast<std::conditional_t<std::is_rvalue_reference<S>::value,S,S&>>(__s);
-		}
-	};
-#endif
+
+template<typename T, typename S, typename __MF, bool __MI>
+class var_caster<T, S, __MF, __MI, true, _vtype_category_poly, std::__void_t<decltype(static_cast<remove_pointer_or_reference_t<T>*>((std::remove_const_t<remove_pointer_or_reference_t<S>>*)nullptr))> >
+{
+    using TT = remove_pointer_or_reference_t<T>;
+    using SS = remove_pointer_or_reference_t<S>;
+public:
+
+    template<size_t __I>
+    static
+    std::conditional_t<std::is_rvalue_reference<S>::value,T,T&>
+    forward(SS &__s) noexcept
+    {
+        return static_cast<std::conditional_t<std::is_rvalue_reference<S>::value, T, T&>>(const_cast<remove_const_t<SS>&>(__s));
+    }
+
+    template<size_t __I>
+    static
+    TT*
+    forward(SS *__s) noexcept
+    {
+        return static_cast<TT*>(const_cast<std::remove_const_t<SS>*>(__s));
+    }
+};
 
 
 
+template<typename T, typename S, typename __MF, bool __MI, bool __IsToClass, typename Dummy>
+class var_caster<T, S, __MF, __MI, __IsToClass, __virt, Dummy> {
+    static_assert( __MI == true, "needs multi_func<...,true>");
+
+    using TT = remove_pointer_or_reference_t<T>;
+    using SS = remove_pointer_or_reference_t<S>;
+public:
+
+    template<size_t __I>
+    static
+    std::conditional_t<std::is_rvalue_reference<S>::value,T,T&>
+    forward(SS &__s)
+    {
+        using Domain  = typename std::tuple_element<__I,typename __MF::Domains>::type;
+        using TypeMap = vtypemap<Domain, SS, __MI>;
+
+        TypeMap::init();
+
+        return static_cast<std::conditional_t<std::is_rvalue_reference<S>::value, T, T&>>(*TypeMap::template cast<TT>(__s.vtypeid(), &__s));
+    }
+
+    template<size_t __I>
+    static
+    TT*
+    forward(SS *__s) noexcept
+    {
+        using Domain  = typename std::tuple_element<__I,typename __MF::Domains>::type;
+        using TypeMap = vtypemap<Domain, SS, __MI>;
+
+        TypeMap::init();
+
+        return TypeMap::template cast<TT>(__s->vtypeid(), __s);
+    }
+};
+
+
+template<typename T, typename S, typename __MF, bool __isMI, bool __IsToClass>
+class var_caster<T, S, __MF, __isMI, __IsToClass, __virt, std::__void_t<decltype(static_cast<remove_pointer_or_reference_t<T>*>((typename std::remove_const<typename remove_pointer_or_reference<S>::type>::type::base_type_poly*)nullptr))>>
+{
+    using TT = remove_pointer_or_reference_t<T>;
+    using SS = remove_pointer_or_reference_t<S>;
+public:
+
+    template<size_t __I>
+    static
+    std::conditional_t<std::is_rvalue_reference<S>::value,T,T&>
+    forward(SS &__s)
+    {
+        using Domain  = typename std::tuple_element<__I,typename __MF::Domains>::type;
+        using TypeMap = vtypemap<Domain, SS, __isMI>;
+
+        TypeMap::init();
+
+        if( __isMI )
+            return static_cast<std::conditional_t<std::is_rvalue_reference<S>::value, T, T&>>(*vane::get<TT>(
+                static_cast<TT*>((typename SS::base_type_poly*)((char*)&__s + __s._vdiff))
+            ));
+        else 
+            return static_cast<std::conditional_t<std::is_rvalue_reference<S>::value, T, T&>>(*vane::get<TT>(remove_const_t<SS*>(&__s)));
+    }
+
+
+    template<size_t __I>
+    static
+    TT*
+    forward(SS *__s) noexcept
+    {
+        using Domain  = typename std::tuple_element<__I,typename __MF::domains>::type;
+        using TypeMap = vtypemap<Domain, SS, __isMI>;
+
+        TypeMap::init();
+
+        if( __isMI )
+            return static_cast<TT*>((typename SS::base_type_poly*)((char*)__s + __s->_vdiff));
+        else {
+            return vane::get<TT>(const_cast<std::remove_const_t<SS>*>(__s));
+        }
+    }
+};
+
+
+
+
+//var<>
+template<typename T, typename S, typename __MF, bool __isMI>
+class var_caster<T, S, __MF, __isMI, false,  __var>
+{
+    using TT = remove_pointer_or_reference_t<T>;
+    using SS = remove_pointer_or_reference_t<S>;
+public:
+
+    template<size_t __I>
+    static
+    std::conditional_t<std::is_rvalue_reference<S>::value,T,T&>
+    forward(SS &__s)
+    {
+        return static_cast<std::conditional_t<std::is_rvalue_reference<S>::value, T, T&>>(vane::get<TT>(const_cast<std::remove_const_t<SS>&>(__s)));
+    }
+
+    template<size_t __I>
+    static
+    TT*
+    forward(SS *__s) noexcept {
+        return vane::get<TT>(__s);
+    }
+
+};
+
+
+template<typename T, typename S, typename __MF>
+class var_caster<T, S, __MF, false, true, __var>
+{
+    using TT = remove_pointer_or_reference_t<T>;
+    using SS = remove_pointer_or_reference_t<S>;
+public:
+
+    template<size_t __I>
+    static
+    TT*
+    forward(SS *__s) noexcept
+    {
+        using Domain  = typename std::tuple_element<__I,typename __MF::Domains>::type;
+        vtypemap<Domain, SS, false>::init();
+
+        return vane::get<TT>(const_cast<std::remove_const_t<SS>*>(__s));
+    }
+
+    template<size_t __I>
+    static
+    std::conditional_t<std::is_rvalue_reference<S>::value,T,T&>
+    forward(SS &__ss)
+    {
+        remove_const_t<SS> &__s = const_cast<remove_const_t<SS>&>(__ss);
+
+        using Domain  = typename std::tuple_element<__I,typename __MF::Domains>::type;
+        vtypemap<Domain, SS, false>::init();
+
+        return static_cast<std::conditional_t<std::is_rvalue_reference<S>::value, T, T&>>(vane::get<TT>(__s));
+    }
+};
+
+
+template<typename T, typename S, typename __MF>
+class var_caster<T, S, __MF, true, true, __var> 
+{
+    using TT = remove_pointer_or_reference_t<T>;
+    using SS = remove_pointer_or_reference_t<S>;
+
+public:
+    template<size_t __I>
+    static
+    std::conditional_t<std::is_rvalue_reference<S>::value,T,T&>
+    forward(SS &__s)
+    {
+        using Domain    = typename std::tuple_element<__I,typename __MF::Domains>::type;
+        static_assert( 0 <= tuple_index<TT,Domain>, "argument type out of the domain");
+
+        return static_cast<std::conditional_t<std::is_rvalue_reference<S>::value, T, T&>>(*vtypemap<Domain, SS, true>::template cast<TT>(__s.vtypeid(), &__s));
+    }
+
+    template<size_t __I>
+    static
+    TT*
+    forward(SS *__s) noexcept
+    {
+        using Domain    = typename std::tuple_element<__I,typename __MF::Domains>::type;
+        static_assert( 0 <= tuple_index<std::remove_const_t<TT>,Domain>, "argument type out of the domain");
+
+        return vtypemap<Domain, SS, true>::template cast<TT>(__s->vtypeid(), __s);
+    }
+};
+
+
+
+template<typename T, typename S, typename MF>
+struct arg_caster
+{
+    template<size_t __I>
+    static
+    constexpr S&&
+    forward(typename std::remove_reference<S>::type &__s) noexcept
+    {
+        return std::forward<S&&>(__s);
+    }
+
+    template<size_t __I>
+    static
+    constexpr S&&
+    forward(typename std::remove_reference<S>::type &&__s) noexcept
+    {
+        return std::forward<S&&>(__s);
+    }
+};
+
+
+
+
+//  utils
 template<typename T> inline
 auto &__base_typeid(T &&x) { return typeid(x); }
 
@@ -2349,93 +4508,9 @@ auto &__base_typeid(T *x) { return typeid(*x); }
 
 
 
-
-/*-------------------------------------------------------------------------------------------------
-	__RuntimeError
+/*---------------------------------------------------------------------
+    _Hash
 */
-
-// exception: multifunction_error_invalid_call
-namespace multifunction_error {
-
-	struct invalid_call : std::runtime_error {
-		invalid_call(const char*m="multi-function error: function not found or ambiguous call") : runtime_error(m) {}
-	};
-
-	struct out_of_domain : invalid_call {
-		out_of_domain(const char *m="multi-function error: argument(s) out of domain") : invalid_call(m) {}
-	};
-}
-
-
-
-/////////////////////////////////////////////////////////////////////////////////////
-// __runtime_error_function_not_found_or_ambiguous_call()
-
-inline __attribute__((noinline)) __attribute__((noreturn))
-void __runtime_error_function_not_found_or_ambiguous_call() {
-    throw multifunction_error::invalid_call();
-}
-
-template<typename Return>
-inline __attribute__((noreturn))
-Return __runtime_error_function_not_found_or_ambiguous_call() {
-	__runtime_error_function_not_found_or_ambiguous_call();
-}
-
-
-template<typename Return, typename FX, typename...Args>
-inline Return __runtime_error_function_not_found_or_ambiguous_call(FX *fx, Args&&...args) {
-	return __runtime_error_function_not_found_or_ambiguous_call<Return>();
-}
-
-
-/////////////////////////////////////////////////////////////////////////////////////
-// __runtime_error_out_of_domain()
-inline __attribute__((noinline)) __attribute__((noreturn))
-void __runtime_error_out_of_domain() {
-    throw multifunction_error::out_of_domain();
-}
-
-template<typename Return>
-inline __attribute__((noreturn))
-Return __runtime_error_out_of_domain() {
-	__runtime_error_out_of_domain();
-}
-
-
-template<typename Return, typename FX, typename...Args>
-inline Return __runtime_error_out_of_domain(FX *fx, Args&&...args) {
-	return __runtime_error_out_of_domain<Return>();
-}
-
-
-/////////////////////////////////////////////////////////////////////////////////////
-template<typename FX, typename Return, typename Args, typename VFlags> 
-struct __RuntimeError;
-
-template<typename FX, typename Return, typename...Args, typename VFlags>
-struct __RuntimeError<FX, Return, std::tuple<Args...>, VFlags> {
-
-	using Func = Return(*)(FX *fx, Args...args);
-
-	//error: function_not_found_or_ambiguous_call
-	static Func get_function_not_found_or_ambiguous_call() {
-		return _function_not_found_or_ambiguous_call;
-	}
-	static Return _function_not_found_or_ambiguous_call(FX *fx, Args...args) {
-		return __runtime_error_function_not_found_or_ambiguous_call<Return>(fx, std::forward<Args>(args)...);
-	}
-
-	//error: out_of_domain
-	static Func get_out_of_domain() {
-		return _out_of_domain;
-	}
-	static Return _out_of_domain(FX *fx, Args...args) {
-		return __runtime_error_out_of_domain<Return>(fx, std::forward<Args>(args)...);
-	}
-};
-
-
 
 template<typename T>
 struct _Hash;
@@ -2443,623 +4518,821 @@ struct _Hash;
 template<typename T,size_t N>
 struct _Hash<std::array<T,N>> : public std::__hash_base<size_t, std::array<T,N>>
 {
-	size_t operator()(const std::array<T,N> & __a) const noexcept {
-		return std::_Hash_impl::hash(__a.data(), __a.size());
-	}
+    size_t operator()(const std::array<T,N> & a) const noexcept {
+        return std::_Hash_impl::hash(a.data(), a.size());
+    }
 };
 
 
-/*------------------------------------------------------*/
 template<typename T>
 T *get_base_ptr(T *p) {
-	return p;
+    return p;
 }
 
 template<typename T>
 T *get_base_ptr(T &ref) { 
-	return &ref;
+    return &ref;
 }
 
 
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-//ArgDef
-	template<typename Domain, size_t I, typename Domains, typename RootType, typename BaseTypes>
-	struct _ArgDef_filter_sameBase : std::is_base_of<RootType, typename std::tuple_element<I,BaseTypes>::type> { };
 
-	template<typename RootType, size_t I, typename RootTypeSet, typename Domains, typename BaseTypes>
-	struct _ArgDef_map_group_by_root {
-		using map =	std::tuple<tuple_uniq_t<
-						tuple_cat_t<
-							std::tuple<RootType>,
-							tuple_catInner<tuple_map<Domains, _ArgDef_filter_sameBase, RootType,BaseTypes>>
-						>
-					>>;
-	};
-
-	template<typename BaseType, size_t I, typename RootTypeSet>
-	struct _ArgDef_filter_baseOnly;
-
-	template<typename BaseType, size_t I, typename...TypeI>
-	struct _ArgDef_filter_baseOnly<BaseType,I,std::tuple<TypeI...>> : std::__not_< std::__or_< std::__and_<std::__not_<std::is_same<TypeI,BaseType>>, std::is_base_of<TypeI, BaseType>>...  > >
-		{ };
-
-
-	template<typename BaseType, size_t I, typename BaseTypes, typename RootTypeSet>
-	struct _ArgDef_map_root {
-		using map = tuple_map<RootTypeSet, tuple_filters::is_base_of, BaseType>;
-	};
-
-	template <typename _VSig, typename _Domains>
-	struct __ArgDef__ {
-		using VSig  = _VSig;
-		enum { ARGC = VSig::ARGC };
-
-		using BaseTypes		= remove_pointers_or_references< typename VSig::virtual_arg_types >;
-		using RootTypeSet	= tuple_map<tuple_uniq_t<BaseTypes>, _ArgDef_filter_baseOnly>;
-		using RootDomains	= tuple_map<RootTypeSet, _ArgDef_map_group_by_root, _Domains,BaseTypes>;
-		using RootTypes		= tuple_map<BaseTypes, _ArgDef_map_root, RootTypeSet>;
-
-
-		template<typename D, size_t I, typename __Domains>
-		struct map_normalized_domain {
-			template<typename Ri, size_t _I, typename RootDomain>
-			struct map_helper {
-				using Callables = typename get_sigs_callable<std::tuple<Ri>, tuple_map<D, tuple_filters::map_tuple_wrapped>>::type;
-				using map = 
-					std::conditional_t< !std::tuple_size<Callables>::value,
-						std::tuple<>,
-						std::tuple_element_t<0,
-							tuple_cat_t<
-								get_sigs_bestMatch< Callables >,
-								std::tuple< std::tuple<Ri> >
-							>
-						>
-					>;
-			};
-			using map = std::tuple< tuple_uniq_t<tuple_map< 
-				std::tuple_element_t< tuple_index<std::tuple_element_t<I,RootTypes>, RootTypeSet>, RootDomains >,
-				map_helper
-			>>>;
-		};
-		using Domains = tuple_map<_Domains, map_normalized_domain>;
-	};
-
-
-
-/////////////////////////////////////////////////////////////////////////////////
-namespace __helper__ {
-
-	template<typename Common, typename BaseArgs, typename ToCastArgs,
-		typename SigArgs = typename Common::VSig::arg_types,
-		typename RealArgs= typename decorate_virtual_args<typename Common::_ArgDef::VSig, ToCastArgs>::type,
-		typename ArgISeq = std::make_index_sequence<Common::_ArgDef::ARGC>,
-		bool=__FX_exists_callable<typename Common::FX, RealArgs>::value 
-	> struct _CallerHelper_MultiDomain;
-
-	//not callable
-	template<typename Common, typename...BaseArg, typename ToCastArgs, typename...Sa, typename...Ra, size_t..._AI>
-	struct _CallerHelper_MultiDomain<Common,std::tuple<BaseArg...>, ToCastArgs, std::tuple<Sa...>, std::tuple<Ra...>, std::index_sequence<_AI...>, false> {
-		static typename Common::Func get_caller() {
-			return Common::get_runtime_error_function_not_found_or_ambiguous_call();
-		}
-	};
-
-	//callable
-	template<typename Common, typename...BaseArg, typename...Ta, typename...Sa, typename...Ra, size_t..._AI>
-	struct _CallerHelper_MultiDomain<Common,std::tuple<BaseArg...>,std::tuple<Ta...>, std::tuple<Sa...>, std::tuple<Ra...>, std::index_sequence<_AI...>, true> {
-
-		static typename Common::VSig::return_type call(typename Common::FX *fx, Sa...args) {
-			return (*fx)( arg_caster<Ra,Sa>::forward(args)... );
-		}
-
-		static constexpr
-		typename Common::Func get_caller() { return &call; }
-	};
-
-
-	///////////////////////////////////////////////////////////////////////////////
-
-	template<typename Common, typename Args>
-	struct caller_generator {
-			static constexpr
-			typename Common::Func get_caller() {
-				return _CallerHelper_MultiDomain<Common,typename Common::_ArgDef::BaseTypes, Args>::get_caller();
-			}
-	};
-
-	////////////////////////////////////////////////////////////////////////////////
-	template<typename Common, typename...DimTs>
-	struct _TableBuildHelper;
-
-	template<typename Common, typename...Ts>
-	struct _TableBuildHelper<Common, std::tuple<Ts...>> {
-		using table_t = std::array<typename Common::Func, sizeof...(Ts)>;
-
-		template <typename Ta=std::tuple<>>
-		static constexpr
-		table_t get_table() {
-			return table_t{ caller_generator<Common, tuple_add_t<Ta,Ts>>::get_caller()...  };
-		}
-	};
-
-	template<typename Common, typename...Ts, typename...Ds>
-	struct _TableBuildHelper<Common, std::tuple<Ts...>,Ds...> {
-		using Prev = _TableBuildHelper<Common,Ds...>;
-		using table_t = std::array< typename Prev::table_t, std::tuple_size<std::tuple<Ts...>>::value >;
-
-		template <typename Ta = std::tuple<>>
-		static constexpr
-		table_t get_table() {
-			return	table_t{ Prev::template get_table<tuple_add_t<Ta,Ts>>()...  };
-		}
-	};
-
-
-	/////////////////////////////////////////////////////////////////////////////////////////////
-	//struct Common
-	template<typename _FX, typename __ArgDef>
-	struct Common {
-		using FX = _FX;
-		using _ArgDef = __ArgDef;
-		using VSig = typename __ArgDef::VSig;
-
-		using BaseTypes = typename _ArgDef::BaseTypes;
-		using Func = typename make_signature<typename VSig::return_type, tuple_cat_t<std::tuple<FX*>, typename VSig::arg_types>>::type*;
-
-
-		//////////////////////////////////////////////////////////////////////////////////////
-		using __RuntimeError = __RuntimeError<FX,typename VSig::return_type, typename VSig::arg_types, typename VSig::virtual_flags>; 
-
-		static Func get_runtime_error_function_not_found_or_ambiguous_call() {
-			return __RuntimeError::get_function_not_found_or_ambiguous_call();
-		}
-
-		static Func get_runtime_error_out_of_domain() {
-			return __RuntimeError::get_out_of_domain();
-		}
-	};
-
-
-	//////////////////////////////////////////////////////////////////////////////////
-	template<typename FX, typename __ArgDef>
-	struct __TableBuilder;
-
-	template<typename FX, typename _VSig, typename...Ds>
-	struct __TableBuilder<FX, __ArgDef__<_VSig,std::tuple<Ds...>>> {
-		using _ArgDef = __ArgDef__<_VSig,std::tuple<Ds...>>;
-		using _Helper = _TableBuildHelper< Common<FX,_ArgDef>, Ds...>;
-		using table_t = typename _Helper::table_t;
-		//////////////////////////////////////////////////////////
-		using _Common = Common<FX,_ArgDef>;
-		using Func = typename _Common::Func;
-
-		static
-		constexpr table_t get_table() {
-			return _Helper::get_table();
-		}
-	};
-
-	///////////////////////////////////////////////////////////////////////////////////////////
-	template<typename R, typename D, typename ET=int, bool=std::is_same<R,D>::value>
-	struct _KeyTableRow;
-
-	template<typename...Rs, typename D, typename ET>
-	struct _KeyTableRow<std::tuple<Rs...>, D, ET,false> {
-		enum { FULL_DOMAINED = false };
-
-		ET operator[](int i) const { return data[i]; }
-
-		static constexpr _KeyTableRow get() {
-			struct Dummy;
-			return _KeyTableRow {
-				tuple_index<
-					std::tuple_element_t<0,
-						std::tuple_element_t<0,
-							tuple_cat_t< get_sigs_bestMatch< typename get_sigs_callable<std::tuple<Rs>, tuple_map<D, tuple_filters::map_tuple_wrapped>>::type >, std::tuple<std::tuple<Dummy>> >
-						>
-					>,
-					D,
-					false
-				>...
-			};
-
-		}
-
-		std::array<ET, sizeof...(Rs)>	data;
-	};
-
-
-
-	template<typename...Rs, typename D, typename ET>
-	struct _KeyTableRow<std::tuple<Rs...>,D, ET,true> {
-		enum { FULL_DOMAINED = true };
-		constexpr ET operator[](int i) const { return i; }
-
-		static constexpr _KeyTableRow get() {
-			return {};
-		}
-
-		std::array<ET,0>	data;
-	};
-
-
-	////////////////////////////////////////////////////////////
-
-	template<typename ArgDef>
-	struct _KeyTableBuilder;
-
-	template<typename _VSig, typename...Ds>
-	struct _KeyTableBuilder<__ArgDef__<_VSig,std::tuple<Ds...>>> {
-		using _ArgDef = __ArgDef__<_VSig,std::tuple<Ds...>>;
-
-		static constexpr auto get_table() {
-			return std::make_tuple(
-				_KeyTableRow<
-					std::tuple_element_t<
-						tuple_index<
-							std::tuple_element_t<tuple_index<Ds,std::tuple<Ds...>>,typename _ArgDef::RootTypes>,
-							typename _ArgDef::RootTypeSet
-						>,
-						typename _ArgDef::RootDomains
-					>,
-					Ds
-				>::get()...
-			);
-		}
-
-		using table_t = decltype(get_table());
-	};
-
-}//namespace __helper__
-
-
-
-///////////////////////////////////////////////////////////////////
-template<typename _Sig, 
-	typename _Args=typename resolve_virtual_signature<_Sig>::arg_types, 
-	typename _ArgSeq =std::make_index_sequence<std::tuple_size<_Args>::value>, 
-	typename _VArgSeq=std::make_index_sequence<std::tuple_size< typename resolve_virtual_signature<_Sig>::virtual_arg_types >::value>,
-	typename _NormalizedArgs = typename resolve_virtual_signature<_Sig>::normalized_arg_types
-	>
-struct __multifunc;
-
-
-template<typename _Sig, typename..._Args, size_t..._AI, size_t..._VI, typename..._NArgs>
-struct __multifunc<_Sig, std::tuple<_Args...>, std::index_sequence<_AI...>, std::index_sequence<_VI...>, std::tuple<_NArgs...>> {
-protected:
-	enum { ARGC = sizeof...(_Args) };
-	enum { VARGC = sizeof...(_VI) };
-
-	using VSig = resolve_virtual_signature<_Sig>;
-	using return_type = typename VSig::return_type;
-	using arg_types   = typename VSig::arg_types;
-	using virtual_arg_types = typename VSig::virtual_arg_types;
-	using static_arg_types  = typename VSig::static_arg_types;
-	using index_from_normal = typename VSig::index_from_normal;
-
-	virtual return_type _call(_NArgs...argi) = 0;
-
-public:
-	return_type call(_Args...argi) {
-		typename VSig::arg_types	__args{std::forward<_Args>(argi)...};	//will be optimized away by the compiler
-		return _call( std::forward<_NArgs>(std::get<iseq_at<_AI, index_from_normal>>(__args))... );
-	}
-};
-
-
-
-////////////////////////////////////////////////////////////////////////
-template<typename FX,
-		template <typename...> class Map = std::unordered_map,
-		typename Args=typename resolve_virtual_signature<typename FX::type>::arg_types, 
-		typename _ArgSeq=std::make_index_sequence<std::tuple_size<Args>::value>,
-		typename _VArgSeq=std::make_index_sequence<std::tuple_size< typename resolve_virtual_signature<typename FX::type>::virtual_arg_types >::value>,
-		typename _NormalizedArgs = typename resolve_virtual_signature<typename FX::type>::normalized_arg_types
-		>
-struct multifunc;
-
-
-template<typename FX, template <typename...> class Map, typename..._Args, size_t..._AI, size_t..._VI, typename..._NArgs>
-struct multifunc<FX,Map,std::tuple<_Args...>, std::index_sequence<_AI...>, std::index_sequence<_VI...>, std::tuple<_NArgs...>>
-	: __multifunc<typename FX::type>, FX
+template<typename T, size_t I, typename Tuple>
+struct map_tuple_wrapped { using map = std::tuple< std::tuple<T> >; };
+
+struct _VT_CHECK{};
+template<typename MF, typename ToCastArgs,
+    typename BaseArgs = typename MF::BaseTypes, 
+    typename SigArgs  = typename MF::VSig::arg_types,
+    typename RealArgs = remove_consts<typename substitute_virtual_args<typename MF::VSig, ToCastArgs>::type>,
+    typename ArgISeq  = std::make_index_sequence<MF::ARGC>,
+    typename =  std::conditional_t< tuple_index<_VT_CHECK,ToCastArgs,false> >= 0,                       _VT_CHECK,
+                std::conditional_t< FX_utils::__FX_exists_callable<typename MF::FX, RealArgs>::value,   std::true_type,
+                                                                                                        std::false_type >
+                >
+> struct _CallerHelper;
+
+template<typename MF, typename...Ta, typename...BaseArg, typename...Sa, typename...Ra, size_t..._AIs>
+struct _CallerHelper<MF, std::tuple<Ta...>, std::tuple<BaseArg...>, std::tuple<Sa...>, std::tuple<Ra...>, std::index_sequence<_AIs...>, _VT_CHECK>
 {
-protected:
-	using Super =  __multifunc<typename FX::type>;
-	using typename Super::return_type;
-	using typename Super::VSig;
-	using typename Super::virtual_arg_types;
-	using typename Super::static_arg_types;
-
-	enum { ARGC  = Super::ARGC };
-	enum { VARGC = Super::VARGC };
-	using _ArgDef = __ArgDef__<VSig, typename __ArgDef__<VSig, typename FX::Domains>::Domains>;
-	using TableBuilder = __helper__::__TableBuilder<FX,_ArgDef>;
-	using table_t = typename TableBuilder::table_t;
-
-	using KeyTableBuilder = __helper__::_KeyTableBuilder<_ArgDef>;
-	using key_table_t = typename KeyTableBuilder::table_t;
-
-
-	using Domains		= typename _ArgDef::Domains;
-	using BaseTypes		= typename _ArgDef::BaseTypes;
-	using RootTypes		= typename _ArgDef::RootTypes;
-	using RootTypeSet	= typename _ArgDef::RootTypeSet;
-	using RootDomains	= typename _ArgDef::RootDomains;	//args-domains
-	enum { ROOTC = std::tuple_size<RootTypeSet>::value };
-
-
-	///////////////////////////////////////////////////////////////////
-	template<size_t I>
-	struct _root_index_of
-		: std::integral_constant<int, tuple_index<std::tuple_element_t<I,RootTypes>, RootTypeSet>> { };
-
-	template<size_t I>
-	static constexpr int root_index_of = _root_index_of<I>::value;
-
-	using Func = typename make_signature<typename VSig::return_type, tuple_cat_t<std::tuple<FX*>, typename VSig::arg_types>>::type*;
-	using typemap_t = Map<size_t, int>;
-
-
-	struct MappingInfo {
-		const table_t			*table;
-		typemap_t				typemap;
-		std::vector<std::vector<int>>		_multi_bases;
-		Map<std::array<int,VARGC>, Func,_Hash<std::array<int,VARGC>>>	multi_map;
-
-		std::vector<int>	multi_bases;
-		std::vector<int>	multi_bases_storage;
-	};
-	using type_index_t = unsigned short;
-
-	using typename Super::index_from_normal;
-	using normalized_arg_types = typename VSig::normalized_arg_types;
-
-	using FX::FX;
-
-	static const table_t &get_table() {
-		static const table_t __table = TableBuilder().get_table();
-		return __table;
-	}
-
-
-public:
-	virtual return_type _call(_NArgs...argi)
-	{
-		MappingInfo &mappingInfo = get_mappingInfo();
-
-		std::tuple<_NArgs...> __args{std::forward<_NArgs>(argi)...};
-
-		int sum = 0, tmp;
-		std::array<int, VARGC> ai{ (tmp=mappingInfo.typemap[__base_typeid(std::get<_VI>(__args)).hash_code()]-1, sum|=(unsigned)tmp,tmp)... };
-
-
-		if( 0 <= sum ) {
-			sum = _visitor_mkey_index_lookup<VARGC>(get_key_table(), ai, ai, std::bit_or<int>(), 0);
-			if( 0 <= sum ) {
-				auto func = multi_array_getAt(*mappingInfo.table, ai);
-				return func(this, std::forward<_Args>(std::get< iseq_at<_AI, typename VSig::index_to_normal> >(__args))...);
-			}
-
-			if( sum==-1 ) {
-				return TableBuilder::_Common::get_runtime_error_out_of_domain()
-						(this, std::forward<_Args>(std::get< iseq_at<_AI, typename VSig::index_to_normal> >(__args))...);
-			}
-		}
-
-		if( sum < -1 ) {
-			auto func = mappingInfo.multi_map[ai];
-			if( func ) {
-				return func(this, std::forward<_Args>(std::get< iseq_at<_AI, typename VSig::index_to_normal> >(__args))...);
-			}
-			assert(!"function not found in cache");
-		}
-
-		return handle_invalid_argtypes(ai, std::forward<_NArgs>(argi)...);
-
-	}//end-of _call()//////////////////////////////////////////////////////////////
-
-protected:
-	return_type 
-	handle_invalid_argtypes( std::array<int,VARGC> &ai, _NArgs...argi)
-	{
-		auto classTree = get_classTree();
-		const auto &typeInfo = get_typeInfo();
-		MappingInfo &mappingInfo = get_mappingInfo();
-
-
-		std::tuple<_NArgs...> __args{std::forward<_NArgs>(argi)...};
-		std::array<void*, VARGC> vargv{ get_base_ptr(std::get<_VI>(__args))... };
-
-		std::array<int, VARGC> nBases;	nBases.fill(1);
-		std::array<int, VARGC> pBases;
-		std::vector<int> base_store;
-
-		std::vector<int> bases;
-		int sum = 0;
-		for(int i=0; i<VARGC ;++i) {
-			pBases[i] = base_store.size();
-			size_t hash_code;
-
-			struct Dummy	{ virtual ~Dummy()=0; };
-			if( ai[i]==-1 ) {
-				hash_code = typeid(*static_cast<Dummy*>(vargv[i])).hash_code();
-				ai[i] = mappingInfo.typemap[hash_code]-1;
-			}
-
-			if( ai[i]==-1 ) {
-				bases.clear();
-				class_tree::find_closest_base(vargv[i], classTree[i], bases, typeInfo[i].data);
-				if( bases.size()<=1 ) {
-					ai[i] = (bases.size() ? bases[0] : 0);
-					mappingInfo.typemap[hash_code] = ai[i]+1;
-				}
-				else {
-					mappingInfo._multi_bases.push_back( bases );
-					mappingInfo.typemap[hash_code] = ai[i] = mappingInfo._multi_bases.size() | ~(unsigned(-1)>>1);
-					--ai[i];
-				}
-			}
-
-			sum |= ai[i];
-
-			if ( ai[i] >= 0 ) {
-				nBases[i] = 1;
-				base_store.push_back(ai[i]);
-			}
-			else {
-				auto &_bases = mappingInfo._multi_bases[ai[i] & (unsigned(-1)>>1)];
-				nBases[i] = _bases.size();
-				std::copy( begin(_bases), end(_bases), back_inserter(base_store));
-			}
-		}//end-for
-
-		assert( sum !=-1 );
-		if( 0 <= sum )	{
-			return _call(std::forward<_NArgs>(argi)...);	//re-visit
-		}
-
-		//case: sum < 0 //////////////////////////////////////////////////////////////////
-
-		auto vtable = *mappingInfo.table;
-
-		std::vector<std::array<int,VARGC>> sigs;
-		std::vector<typename TableBuilder::Func> funcs;
-		foreach_cartesian<VARGC>(
-			nBases,
-			[&vtable,&funcs,&base_store,&pBases,&sigs](std::array<int,VARGC> &key){
-				std::array<int,VARGC> index;
-				for(int i=0; i<VARGC ;++i)
-					index[i] = base_store[pBases[i] + key[i]];
-
-				int sum = _visitor_mkey_index_lookup<VARGC>(get_key_table(), index, index, std::bit_or<int>(), 0);
-				assert( 0 <= sum );
-
-				auto func = multi_array_getAt(vtable, index);
-				if(	func != TableBuilder::_Common::get_runtime_error_function_not_found_or_ambiguous_call() ) {
-					funcs.push_back(func);
-					sigs.push_back(index);
-				}
-			} 
-		);
-
-
-		typename TableBuilder::Func func = nullptr;
-		if ( 1<=funcs.size() ) {
-			std::vector<std::array<int,VARGC>*> best_sigs;
-			for(auto &x : sigs )
-				best_sigs.push_back(&x);
-
-			get_assignability_table().reduce_sigs(best_sigs);
-
-			//func = funcs[0];
-			func = multi_array_getAt(vtable, *best_sigs[0]);
-		}
-		else {
-			func = TableBuilder::_Common::get_runtime_error_function_not_found_or_ambiguous_call();
-		}
-		assert( func );
-
-		mappingInfo.multi_map[ai] = func;
-
-		return func(this, std::forward<_Args>(std::get< iseq_at<_AI, typename VSig::index_to_normal> >(__args))...);
-		//return _call(std::forward<_NArgs>(argi)...);	//re-visit//XXX
-	}
-
-	////////////////////////////////////////////////////////////////////////////////////
-
-	static const key_table_t &get_key_table() {
-
-		static const key_table_t __key_table = KeyTableBuilder().get_table();
-
-		return __key_table;
-	}
-
-
-	static MappingInfo &build_mappingInfo() {
-		static MappingInfo __info = {&get_table()};
-		build_map( __info.typemap );
-		return __info;
-	}
-
-	static MappingInfo &get_mappingInfo() {
-		static MappingInfo &__info = build_mappingInfo();
-		return __info;
-	}
-
-	static void build_map(typemap_t &__map) {
-
-		auto &typeInfo = get_root_typeInfo();
-
-		for(int j=0; j<ROOTC ;++j) {
-			for(int i=0; i < typeInfo[j].size ;++i) {
-				__map[typeInfo[j].data[i].type_info->hash_code()] = i+1;
-			}
-		}
-	}
-
-
-	////////////////////////////////////////////////////////////////////////////////////
-	template<size_t...I>
-	static const auto &_get_root_typeInfo(std::index_sequence<I...> ) {
-		static const auto typeinfo_tuple =
-			std::make_tuple(
-				class_tree::build_tyepInfoList<
-					std::tuple_element_t<I,RootDomains>,
-					std::tuple_element_t<I,RootTypeSet>
-				>()...
-			);
-
-		static const std::array<sized_pdata<const class_tree::TypeInfoEntry>,ROOTC> 
-			__infos{ sized_pdata<const class_tree::TypeInfoEntry>(std::get<I>(typeinfo_tuple).size(), std::get<I>(typeinfo_tuple).data())... };
-
-		return __infos;
-	}
-
-	static const auto &get_root_typeInfo() {
-		return _get_root_typeInfo(std::make_index_sequence<ROOTC>());
-	}
-
-	template<size_t...I>
-	static const auto &build_typeInfo(std::index_sequence<I...>) {
-		auto &root_typeInfo = get_root_typeInfo();
-
-		static const std::array<sized_pdata<const class_tree::TypeInfoEntry>,VARGC> 
-			__infos{ root_typeInfo[root_index_of<I>]... };
-
-		return __infos;
-	}
-
-	static const auto &get_typeInfo() {
-		static const auto &__infos = build_typeInfo(std::make_index_sequence<VARGC>());
-		return __infos;
-	}
-
-	static const auto &get_assignability_table() {
-		static const auto table = assignability_table<RootDomains>::get_instance();
-		return table;
-	}
-
-
-	////////////////////////////////////////////////////////////////////////////////////
-	static const std::array<const class_tree::Node<type_index_t> *, VARGC>
-	&get_classTree() {
-		using namespace vane::class_tree;
-
-		static std::array<const Node<type_index_t> *, VARGC> __classTrees = {
-			build_classTree<
-				inheritance_tree<tuple_map<std::tuple_element_t<root_index_of<_VI>,RootDomains>, tuple_filters::is_not_same, std::tuple_element_t<root_index_of<_VI>,RootTypeSet>>>,
-				std::tuple_element_t<root_index_of<_VI>,RootDomains>,
-				type_index_t
-			>::get()...
-		};
-
-		return __classTrees;
-	}
+    static constexpr
+    typename MF::VFunc get_caller() {
+        return MF::_check_error;
+    }
+};
+
+template<typename MF, typename...Ta, typename...BaseArg, typename...Sa, typename...Ra, size_t..._AIs>
+struct _CallerHelper<MF, std::tuple<Ta...>, std::tuple<BaseArg...>, std::tuple<Sa...>, std::tuple<Ra...>, std::index_sequence<_AIs...>, std::false_type>
+{
+    static constexpr
+    typename MF::VFunc get_caller() {
+        return &MF::__error_NO_MATCH;
+    }
+};
+
+template<typename MF, typename...Ta, typename...BaseArg, typename...Sa, typename...Ra, size_t..._AIs>
+struct _CallerHelper<MF, std::tuple<Ta...>, std::tuple<BaseArg...>, std::tuple<Sa...>, std::tuple<Ra...>, std::index_sequence<_AIs...>, std::true_type>
+{
+    using VSig = typename MF::VSig;
+    using _Return_type = typename VSig::_Return_type;
+
+    static _Return_type call(typename MF::FX *fx, Sa...args)
+    {
+        return FxCaller<typename VSig::return_type,MF>::call( fx,
+                            std::conditional_t< iseq_at<_AIs,typename MF::VSig::virtual_flags>, var_caster<Ra,Sa,MF>, arg_caster<Ra,Sa,MF> >
+                                ::template forward<iseq_at<_AIs, typename VSig::index_to_normal>>(args)... );
+    }
+    static constexpr
+    typename MF::VFunc get_caller() {
+        return &call;
+    }
 };
 
 
-}//namespace vane//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#endif	//___VANE_H_20170719
-// vim: ts=4
 
+
+template<typename MF, typename...DimTs>
+struct _VTableBuilderHelper;
+
+template<typename MF, typename...Ts>
+struct _VTableBuilderHelper<MF, std::tuple<Ts...>> {
+    using table_type = std::array<typename MF::VFunc, sizeof...(Ts)>;
+
+    template <typename Ta=std::tuple<>>
+    static constexpr
+    table_type get_table() {
+        return table_type{ _CallerHelper<MF, tuple_add_t<Ta,Ts>>::get_caller()... };
+    }
+};
+
+template<typename MF, typename...Ts, typename...Ds>
+struct _VTableBuilderHelper<MF, std::tuple<Ts...>,Ds...> {
+    using Prev = _VTableBuilderHelper<MF,Ds...>;
+    using table_type = std::array< typename Prev::table_type, std::tuple_size<std::tuple<Ts...>>::value >;
+
+    template <typename Ta = std::tuple<>>
+    static constexpr
+    table_type get_table() {
+        return  table_type{ Prev::template get_table<tuple_add_t<Ta,Ts>>()...  };
+    }
+};
+
+template<typename T, size_t, typename>
+struct __TB_map_domain {
+    using map=std::tuple<tuple_cat_t<std::tuple<_VT_CHECK>, T>>;
+};
+
+template<typename MF>
+struct __TB_adjust_domains {
+    using type = type_map<typename MF::domains, __TB_map_domain>;
+};
+
+template<typename MF, typename Domains=typename __TB_adjust_domains<MF>::type >
+struct __VTableBuilder;
+
+template<typename MF, typename...Ds>
+struct __VTableBuilder<MF, std::tuple<Ds...>>
+{
+    using table_type = typename _VTableBuilderHelper<MF, Ds...>::table_type;
+
+    static
+    constexpr table_type get_table() {
+        return _VTableBuilderHelper< MF, Ds...>::get_table();
+    }
+};
+
+
+template<typename MF, typename Domain,
+    typename Args = typename substitute_virtual_args<typename MF::VSig, Domain>::type >
+struct _SigTableHelper : FX_utils::FX_exists_sig<typename MF::FX, Args>
+{ };
+
+
+template<typename MF, typename...DimTs>
+struct _SigTableBuilderHelper;
+
+template<typename MF, typename...Ts>
+struct _SigTableBuilderHelper<MF, std::tuple<Ts...>> {
+    static_assert( sizeof(bool)==1, "");
+    using table_type = std::array<bool, sizeof...(Ts)>;
+
+    template <typename Ta=std::tuple<>>
+    static constexpr
+    table_type get_table() {
+        return table_type{ _SigTableHelper<MF, tuple_add_t<Ta,Ts>>::value... };
+    }
+};
+
+template<typename MF, typename...Ts, typename...Ds>
+struct _SigTableBuilderHelper<MF, std::tuple<Ts...>,Ds...> {
+    using Prev = _SigTableBuilderHelper<MF,Ds...>;
+    using table_type = std::array< typename Prev::table_type, std::tuple_size<std::tuple<Ts...>>::value >;
+
+    template <typename Ta = std::tuple<>>
+    static constexpr
+    table_type get_table() {
+        return  table_type{ Prev::template get_table<tuple_add_t<Ta,Ts>>()...  };
+    }
+};
+
+template<typename MF, typename Domains, bool=MF::__isMI>
+struct __SigTableBuilder;
+
+template<typename MF, typename...Ds>
+struct __SigTableBuilder<MF, std::tuple<Ds...>, true>
+{
+    using table_type = typename _SigTableBuilderHelper<MF, Ds...>::table_type;
+
+    static
+    constexpr table_type get_table() {
+        return _SigTableBuilderHelper< MF, Ds...>::get_table();
+    }
+};
+
+template<typename MF, typename...Ds>
+struct __SigTableBuilder<MF, std::tuple<Ds...>, false>
+{
+    using table_type = std::array<bool,0>;
+
+    static
+    constexpr table_type get_table() {
+        return table_type{};
+    }
+};
+
+
+
+
+template<
+    typename _Sig, 
+    typename _Args=typename resolve_virtual_signature<_Sig>::arg_types, 
+    typename _ArgSeq=std::make_index_sequence<std::tuple_size<_Args>::value>, 
+    typename _VArgSeq=std::make_index_sequence<std::tuple_size< typename resolve_virtual_signature<_Sig>::virtual_arg_types >::value>,
+    typename _NormalizedArgs = typename resolve_virtual_signature<_Sig>::normalized_arg_types,
+    typename _return_type = typename resolve_virtual_signature<_Sig>::return_type
+    >
+struct virtual_func_nonVf;
+
+
+template<typename _Sig, typename..._Args, size_t..._AIs, size_t..._VIs, typename..._NArgs, typename _return_type >
+struct virtual_func_nonVf<_Sig, std::tuple<_Args...>, std::index_sequence<_AIs...>, std::index_sequence<_VIs...>, std::tuple<_NArgs...>,_return_type> {
+
+protected:
+    enum { ARGC = sizeof...(_Args) };
+    enum { VARGC = sizeof...(_VIs) };
+
+    using VSig = resolve_virtual_signature<_Sig>;
+
+    using _Return_type = typename VSig::_Return_type;
+    using arg_types   = typename VSig::arg_types;
+
+    using virtual_arg_types = typename VSig::virtual_arg_types;
+    using static_arg_types  = typename VSig::static_arg_types;
+    using index_from_normal = typename VSig::index_from_normal;
+
+    using Self = virtual_func_nonVf;
+
+    _Return_type (*_vfunc)(Self*,_NArgs...);
+    typedef _Return_type (*_vfunc_type)(Self*,_NArgs...);
+
+
+    virtual_func_nonVf(_Return_type (*vfunc)(Self*,_NArgs...)=nullptr) : _vfunc(vfunc) {}
+
+public:
+    _Return_type operator()(_Args...args) {
+        typename VSig::arg_types    __args{std::forward<_Args>(args)...};
+
+        return _vfunc(this, std::forward<_NArgs>(std::get<iseq_at<_AIs, index_from_normal>>(__args))... );
+    }
+
+    _Return_type call(_Args...args) {
+        typename VSig::arg_types  __args{std::forward<_Args>(args)...};
+
+        return _vfunc(this, std::forward<_NArgs>(std::get<iseq_at<_AIs, index_from_normal>>(__args))... );
+    }
+};
+
+
+
+template<typename _Sig, typename..._Args, size_t..._AIs, size_t..._VIs, typename..._NArgs>
+struct virtual_func_nonVf<_Sig, std::tuple<_Args...>, std::index_sequence<_AIs...>, std::index_sequence<_VIs...>, std::tuple<_NArgs...>,void> {
+protected:
+    enum { ARGC = sizeof...(_Args) };
+    enum { VARGC = sizeof...(_VIs) };
+
+    using VSig = resolve_virtual_signature<_Sig>;
+
+    using _Return_type = typename VSig::_Return_type;
+    using arg_types   = typename VSig::arg_types;
+
+    using virtual_arg_types = typename VSig::virtual_arg_types;
+    using static_arg_types  = typename VSig::static_arg_types;
+    using index_from_normal = typename VSig::index_from_normal;
+
+    using Self = virtual_func_nonVf;
+
+    _Return_type (*_vfunc)(Self*,_NArgs...);
+
+    virtual_func_nonVf(_Return_type (*vfunc)(Self*,_NArgs...)=nullptr) : _vfunc(vfunc) {}
+
+public:
+    void operator()(_Args...args) {
+        typename VSig::arg_types    __args{std::forward<_Args>(args)...};
+
+        _vfunc(this, std::forward<_NArgs>(std::get<iseq_at<_AIs, index_from_normal>>(__args))... );
+    }
+
+    void call(_Args...args) {
+        typename VSig::arg_types  __args{std::forward<_Args>(args)...};
+
+        _vfunc(this, std::forward<_NArgs>(std::get<iseq_at<_AIs, index_from_normal>>(__args))... );
+    }
+};
+
+
+
+
+
+
+template<typename FX,
+        bool MI,
+        template <typename...> class Map = std::unordered_map,
+        typename Args=typename resolve_virtual_signature<typename FX::type>::arg_types, 
+        typename _ArgSeq=std::make_index_sequence<std::tuple_size<Args>::value>,
+        typename _VArgSeq=std::make_index_sequence<std::tuple_size< typename resolve_virtual_signature<typename FX::type>::virtual_arg_types >::value>,
+        typename _NormalizedArgs = typename resolve_virtual_signature<typename FX::type>::normalized_arg_types
+        >
+struct multi_func_TM;
+
+
+template<typename _FX, bool _MI, template <typename...> class Map, typename..._Args, size_t..._AIs, size_t..._VIs, typename..._NArgs>
+struct multi_func_TM<_FX,_MI, Map, std::tuple<_Args...>, std::index_sequence<_AIs...>, std::index_sequence<_VIs...>, std::tuple<_NArgs...>>
+    : virtual_func_nonVf<typename _FX::type> ,_FX
+{
+    enum {  __isMI = _MI };
+    using FX = _FX;
+protected:
+    using Self = multi_func_TM;
+
+    using Super =  virtual_func_nonVf<typename FX::type>;
+    using Super::operator();
+    using Super::call;
+public:
+
+    using VSig = typename Super::VSig;
+    using typename Super::_Return_type;
+    using typename Super::virtual_arg_types;
+    using typename Super::static_arg_types;
+
+
+    enum {  ARGC        = Super::ARGC };
+    enum {  VARGC       = Super::VARGC };
+    enum {  ARGC_POLY   = VSig::ARGC_POLY };
+
+
+
+    using VFunc = typename make_signature<typename VSig::_Return_type, tuple_cat_t<std::tuple<FX*>, typename VSig::arg_types>>::type*;
+
+    using _ArgDef = __ArgDef__<VSig, typename FX::domains>;
+
+
+    using domains           = typename _ArgDef::Domains;
+    using BaseTypes         = typename _ArgDef::BaseTypes;
+
+
+    using VTableBuilder = __VTableBuilder<Self>;
+    using vtable_type   = typename VTableBuilder::table_type;
+
+    using SigTableBuilder = __SigTableBuilder<Self, domains>;
+    using sigtable_type   = typename SigTableBuilder::table_type;
+
+    static_assert(__isMI || !domains_multi_inherited<domains>, "multi-inheritance detected");
+
+
+
+public:
+    static
+    typename VSig::_Return_type __error_OOD(FX *fx, _Args...args ) {
+        return _Error_OOD_Helper<Self>::call(fx, std::forward<_Args>(args)...);
+    }
+
+    static
+    typename VSig::_Return_type __error_NO_MATCH(FX *fx, _Args...args ) {
+        return _Error_NO_MATCH_Helper<Self>::call(fx, std::forward<_Args>(args)...);
+    }
+
+    static 
+    typename VSig::_Return_type __error_OOD_default(FX *fx, _Args...args ) {
+        __throw_OOD();
+        return typename VSig::_Return_type();
+    }
+
+    static
+    typename VSig::_Return_type __error_NO_MATCH_default(FX *fx, _Args...args ) {
+        __throw_NO_MATCH();
+        return typename VSig::_Return_type();
+    }
+
+
+    using Super::_vfunc;
+
+    template<typename...Args>
+    multi_func_TM(Args&&...args) : Super(__vcall), _FX{std::forward<Args>(args)...} { }
+
+
+
+
+
+protected:
+
+    using typename Super::index_from_normal;
+    using normalized_arg_types = typename VSig::normalized_arg_types;
+
+
+    //vtype's
+    template<size_t I, int ARGTYPE=iseq_at<I,typename VSig::NARGTYPEs>, bool isMI=__isMI>
+    struct _Index_fetcher {
+        static int get(const std::tuple<_NArgs...>&__args, int&)
+        {
+            using base_type = typename std::tuple_element<I,BaseTypes>::type;
+            vtypemap<typename std::tuple_element<I,domains>::type, base_type, __isMI>::init();
+
+            return vtypemap<typename std::tuple_element<I,domains>::type, base_type, __isMI>
+                    ::get_type_index(std::get<I>(__args));
+
+        }
+    };
+
+    //poly
+    template<size_t I>
+    struct _Index_fetcher<I, VSIG_ARGTYPE_POLY, false> {
+        static int get(const std::tuple<_NArgs...>&__args, int &)
+        {
+            return vtypemap_poly<typename std::tuple_element<I,domains>::type, typename std::tuple_element<I,BaseTypes>::type, __isMI>
+                    ::get_type_index(std::get<I>(__args));
+        }
+    };
+
+    template<size_t I>
+    struct _Index_fetcher<I, VSIG_ARGTYPE_POLY, true> {
+        static int get(const std::tuple<_NArgs...>&__args, int &vid)
+        {
+            return vtypemap_poly<typename std::tuple_element<I,domains>::type, typename std::tuple_element<I,BaseTypes>::type, __isMI>
+                    ::get_type_index(std::get<I>(__args), vid);
+        }
+    };
+
+public:
+
+    static const auto &__get_vtypemaps() {
+        static auto __vtypemaps = std::make_tuple(
+            &std::conditional_t<iseq_at<_VIs,typename VSig::NARGTYPEs> == VSIG_ARGTYPE_POLY,
+                vtypemap_poly<typename std::tuple_element<_VIs,domains>::type, typename std::tuple_element<_VIs,BaseTypes>::type, __isMI>,
+                vtypemap<typename std::tuple_element<_VIs,domains>::type, typename std::tuple_element<_VIs,BaseTypes>::type, __isMI>
+            >::get()...
+        );
+        return __vtypemaps;
+    }
+
+    static auto __get_castmaps(const std::array<int,VARGC> &vids, std::array<int,VARGC> *lengths = nullptr) {
+        return std::array<const int*, VARGC> { 
+            &std::conditional_t<iseq_at<_VIs,typename VSig::NARGTYPEs> == VSIG_ARGTYPE_POLY,
+                vtypemap_poly<typename std::tuple_element<_VIs,domains>::type, typename std::tuple_element<_VIs,BaseTypes>::type, __isMI>,
+                vtypemap<typename std::tuple_element<_VIs,domains>::type, typename std::tuple_element<_VIs,BaseTypes>::type, __isMI>
+            >::get()._castmap[vids[_VIs]][0]...
+        };
+    }
+
+
+public:
+    _Return_type _call(_Args...args)
+    {
+        std::tuple<_Args...>  __args{std::forward<_Args>(args)...};
+        return __vcall(this, std::forward<_NArgs>(std::get<iseq_at<_AIs, index_from_normal>>(__args))... );
+    }
+
+protected:
+    static _Return_type
+    __vcall(Super *__this, _NArgs...args)
+    {
+        std::tuple<_NArgs...>   __args{std::forward<_NArgs>(args)...};
+        enum { use_cache = __isMI && (ARGC_POLY>0) };
+        int vid[use_cache ? VARGC : 0];
+        if( use_cache ) __cache_set_vid(vid);
+
+        std::array<int, VARGC>  ai{ _Index_fetcher<_VIs>::get(__args, vid[_VIs])... };
+
+        auto vfunc = multi_array_getAt(__get_vtable(), ai);
+
+        return vfunc(static_cast<Self*>(__this), std::forward<_Args>(std::get< iseq_at<_AIs, typename VSig::index_to_normal> >(__args))...);
+    }
+
+
+private:
+    static int &__cache_get_vid(int i)          { return __MFCache<>::get_vid(i); }
+    static void __cache_set_vid(int *vid)       { __MFCache<>::set_vid(vid); }
+
+public:
+
+    //vtype--SI
+    template<int I, typename T>
+    static
+    void _check1_SI(bool &error, T *arg, std::enable_if_t<is_vtype<T>::value> * =nullptr) {
+        assert( arg );
+
+        using TypeMap = vtypemap<typename std::tuple_element<I,domains>::type, typename std::tuple_element<I,BaseTypes>::type, __isMI>;
+        TypeMap &tmap = TypeMap::get();
+
+        int vid = arg->vtypeid();
+        int mix = tmap._multimap[vid];
+        if( mix == TypeMap::_MULTIMAP_CELL_UNDEFINED ) {
+            if( tmap.update_maps(vid, arg) == TypeMap::_MULTIMAP_CELL_INVALID ) {
+                error = true;
+                assert( tmap._typemap[vid] == TypeMap::_TYPEMAP_CELL_UNDEFINED );
+            }
+        }
+        else if( mix == TypeMap::_MULTIMAP_CELL_INVALID ) {
+            error = true;
+            assert( tmap._typemap[vid] == TypeMap::_TYPEMAP_CELL_UNDEFINED );
+        }
+    }
+
+    //poly--SI
+    template<int I, typename T>
+    static
+    void _check1_SI(bool &error, const T *arg, std::enable_if_t<!is_vtype<T>::value>* =nullptr) {
+        assert( arg );
+
+        using TypeMap = vtypemap_poly<typename std::tuple_element<I,domains>::type, typename std::tuple_element<I,BaseTypes>::type, __isMI>;
+        TypeMap &tmap = TypeMap::get();
+
+        const auto vid = &typeid(*arg);
+        if( tmap.update_maps(vid, arg) == TypeMap::_TYPEMAP_CELL_UNDEFINED )
+            error = true;
+    }
+
+    static _Return_type
+    _check_error(std::false_type, FX *fx, _NArgs...args)
+    {
+        std::tuple<_NArgs...>  __args{std::forward<_NArgs>(args)...};
+
+        bool error = false;
+        std::make_tuple((_check1_SI<_VIs>(error, get_base_ptr(std::get<_VIs>(__args))),0)...);
+
+        return !error
+            ? __vcall(static_cast<Self*>(fx), std::forward<_NArgs>(args)...)
+            : __error_OOD(fx, std::forward<_Args>(std::get< iseq_at<_AIs, typename VSig::index_to_normal> >(__args))...);
+    }
+    //-----------------------------------------------------------------------------------------------------
+
+
+    struct __Check1_MI
+    {
+        std::array<int,VARGC>  _ai;
+        std::array<int,VARGC>  _vid;
+
+        bool _match;
+        bool _isMI;
+
+
+        //poly
+        template<int I, typename T>
+        void prefetch_index(iseq<I>, T *arg, std::enable_if_t<!is_vtype<T>::value>* = nullptr) {
+            using TypeMap = vtypemap_poly<typename std::tuple_element<I,domains>::type, typename std::tuple_element<I,BaseTypes>::type, __isMI>;
+            TypeMap &tmap = TypeMap::get();
+            
+            _ai[I] = tmap._typemap[ std::get<I>(_vid) = __cache_get_vid(I) ];
+        }
+
+        //vtype
+        template<int I, typename T>
+        void prefetch_index(iseq<I>, T *arg, std::enable_if_t<is_vtype<T>::value>* = nullptr) {
+            using TypeMap = vtypemap<typename std::tuple_element<I,domains>::type, typename std::tuple_element<I,BaseTypes>::type, __isMI>;
+            TypeMap &tmap = TypeMap::get();
+            int vid = std::get<I>(_vid) = arg->vtypeid();
+            _ai[I] = tmap._typemap[vid] | tmap._multimap[vid];
+        }
+
+        //poly
+        template<int I, typename T>
+        void poly_adjust_ai(iseq<I>, T *arg, std::enable_if_t<!is_vtype<T>::value>* = nullptr) {
+            using TypeMap = vtypemap_poly<typename std::tuple_element<I,domains>::type, typename std::tuple_element<I,BaseTypes>::type, __isMI>;
+            _ai[I] &= TypeMap::_TYPEMAP_CELL_MASK_INDEX;
+        }
+
+
+        template<int I, typename T>
+        void poly_adjust_ai(iseq<I>, T *arg, std::enable_if_t<is_vtype<T>::value>* = nullptr) { }
+
+        //vtype--MI
+        template<int I, typename T>
+        void _check1_MI(iseq<I>, const T *arg, std::enable_if_t<is_vtype<T>::value> * =nullptr)
+        {
+            using TypeMap = vtypemap<typename std::tuple_element<I,domains>::type, typename std::tuple_element<I,BaseTypes>::type, __isMI>;
+            TypeMap &tmap = TypeMap::get();
+
+            int vid = arg->vtypeid();
+            int mix = tmap._multimap[vid];
+
+            mix = tmap.update_maps(vid,arg);
+            assert( mix != TypeMap::_MULTIMAP_CELL_UNDEFINED );
+
+            if( mix == TypeMap::_MULTIMAP_CELL_INVALID ) {
+                _match = false;
+            }
+            else if( mix==0 ) {
+                assert( tmap._typemap[vid] );
+                _ai[I] = tmap._typemap[vid];
+            }
+            else {
+                _isMI   = true;
+                _ai[I] = mix;
+                assert( mix == tmap._multimap[vid] );
+            }
+        }
+
+        //poly--MI
+        template<int I, typename T>
+        void _check1_MI(iseq<I>, const T *arg, std::enable_if_t<!is_vtype<T>::value> * =nullptr)
+        {
+            assert( arg );
+
+            using TypeMap = vtypemap_poly<typename std::tuple_element<I,domains>::type, typename std::tuple_element<I,BaseTypes>::type, __isMI>;
+            TypeMap &tmap = TypeMap::get();
+
+            int vid = std::get<I>(_vid);
+            if( vid==0 ) {
+                vid = tmap.update_maps(arg);
+            }
+            assert( vid );
+
+            int tix;
+            int tm = tmap._typemap[vid];
+            _ai[I] = tm;
+
+            if( tm == TypeMap::_TYPEMAP_CELL_INVALID )
+                _match = false;
+            else if( tix=tmap.extract_type_index(tm), !tix ) {
+                _isMI   = true;
+            }
+        }
+    };//end--struct __Check1_MI
+
+
+    static _Return_type 
+    _check_error(std::true_type, FX *fx, _NArgs...args)
+    {
+        std::tuple<_NArgs...>  __args{std::forward<_NArgs>(args)...};
+
+        __Check1_MI  check;
+        std::make_tuple((check.prefetch_index(iseq<_VIs>(), get_base_ptr(std::get<_VIs>(__args))),0)...);
+
+        VFunc vfunc = __get_mvfunc_map()[ check._ai ];
+        if( vfunc )
+            return vfunc(fx, std::forward<_Args>(std::get< iseq_at<_AIs, typename VSig::index_to_normal> >(__args))...);
+
+
+        std::array<int, VARGC> pBases;
+        std::array<int, VARGC> nBases;
+
+
+        check._isMI  = false;
+        check._match = true;
+        std::make_tuple((check._check1_MI(iseq<_VIs>(), get_base_ptr(std::get<_VIs>(__args))),0)...);
+
+        if( ! check._match ) {
+            vfunc = __error_OOD;
+        }
+        else if( ! check._isMI ) {
+            std::make_tuple((check.poly_adjust_ai(iseq<_VIs>(), get_base_ptr(std::get<_VIs>(__args))),0)...);
+
+            vfunc = multi_array_getAt(__get_vtable(), check._ai);
+            assert( vfunc );
+        }
+        else {
+                auto castmaps = __get_castmaps(check._vid);
+
+                constexpr auto _CASTMAP_CELL_INVALID = _var_castmap_common<int>::_CASTMAP_CELL_INVALID;
+
+                std::array<int,  VARGC> _nBases;
+                std::array<int*, VARGC> _pBases;
+
+                gstack<>  gs;
+                auto buffer = gs.alloc<int[]>(linear_sizeof_tuples<domains>);
+                int *gather = buffer.get();
+                for(int i=0; i<VARGC ;++i) {
+                    _pBases[i] = gather;
+
+                    const auto &cmap = castmaps[i];
+                    int extent = domains_sizes<domains>()[i];
+                    for(int j=0;  j < extent  ;++j) {
+                        if( cmap[j] != _CASTMAP_CELL_INVALID )
+                            *gather++ = j;
+                    }
+                    _nBases[i] = gather - _pBases[i];
+                }
+
+                std::vector<std::array<int,VARGC>, gstack_allocator<std::array<int,VARGC>>>  sigs[2];
+                foreach_cartesian<VARGC>(
+                    _nBases,
+                    [&_pBases,&sigs](std::array<int,VARGC> &key) {
+                        std::array<int,VARGC>  index, index_func;
+                        for(int i=0; i <VARGC ;++i) {
+                            auto x = index[i] = _pBases[i][key[i]];
+                            index_func[i] = x + 1;
+                        }
+                        auto func = multi_array_getAt(__get_vtable(), index_func);
+                        if( multi_array_getAt(__get_sigtable(), index) ) {
+                            assert( func );
+                            if( func != __error_NO_MATCH && func )
+                                sigs[0].push_back(index);
+                        }
+                        else if( func != __error_NO_MATCH ) {
+                            sigs[1].push_back(index);
+                        }
+                    } 
+                );
+
+
+                for(auto &sigs : sigs )
+                {
+                    if( 1==sigs.size() ) {
+                        for(auto &x : sigs[0] ) ++x;
+                        vfunc = multi_array_getAt(__get_vtable(), sigs[0]);
+                                                                                assert( vfunc != __error_NO_MATCH );
+                        break;
+                    }
+                    else if( 1 < sigs.size() ) {
+                        {
+                            const std::type_info *arg_tidv[] = { &typeid(*const_cast<typename remove_pointer_or_reference<typename std::tuple_element<_VIs,virtual_arg_types>::type>::type*>(get_base_ptr(std::get<_VIs>(__args))))... };
+                            auto sigc = reduce_sigs<domains,virtual_arg_types>(sigs, castmaps, _var_castmap_common<int>::_CASTMAP_CELL_INVALID, arg_tidv);
+                            sigs.resize(sigc);
+                        }
+
+                        if ( 1 == sigs.size() ) {
+                            for(auto &x : sigs[0] ) ++x;
+                            vfunc = multi_array_getAt(__get_vtable(), sigs[0]);
+                            break;
+                        }
+                    }
+                }
+
+                if( !vfunc )
+                    vfunc = __error_NO_MATCH;
+        }
+
+
+        if( check._isMI ) {
+            __get_mvfunc_map()[check._ai] = vfunc;
+        }
+
+        return vfunc(fx, std::forward<_Args>(std::get< iseq_at<_AIs, typename VSig::index_to_normal> >(__args))...);
+
+    }//end-- _check_error
+
+
+    static
+    _Return_type _check_error(FX *fx, _Args...args)
+    {
+        std::tuple<_Args...>  __args{std::forward<_Args>(args)...};
+
+        return _check_error(std::integral_constant<bool,__isMI>(), fx, std::forward<_NArgs>(std::get<iseq_at<_AIs, index_from_normal>>(__args))...);
+    }
+
+
+protected:
+
+    static const vtable_type &__get_vtable() {
+        return __vtable;
+    }
+    static const sigtable_type &__get_sigtable() {
+        return __sigtable;
+    }
+
+
+    static const vtable_type    __vtable;
+    static const sigtable_type  __sigtable;
+    using __mvfunc_map_type = Map<std::array<int,VARGC>, VFunc, _Hash<std::array<int,VARGC>>>;
+    static __mvfunc_map_type  __mvfunc_map;
+
+    static auto &__get_mvfunc_map() {
+        return __mvfunc_map;
+    }
+};
+
+
+
+
+template<typename FX, bool MI, template <typename...> class Map, typename..._Args, size_t..._AIs, size_t..._VIs, typename..._NArgs>
+const typename multi_func_TM<FX,MI,Map,std::tuple<_Args...>, std::index_sequence<_AIs...>, std::index_sequence<_VIs...>, std::tuple<_NArgs...>>::vtable_type
+     multi_func_TM<FX,MI,Map,std::tuple<_Args...>, std::index_sequence<_AIs...>, std::index_sequence<_VIs...>, std::tuple<_NArgs...>>::__vtable
+     = VTableBuilder::get_table();
+
+template<typename FX, bool MI, template <typename...> class Map, typename..._Args, size_t..._AIs, size_t..._VIs, typename..._NArgs>
+const typename multi_func_TM<FX,MI,Map,std::tuple<_Args...>, std::index_sequence<_AIs...>, std::index_sequence<_VIs...>, std::tuple<_NArgs...>>::sigtable_type
+     multi_func_TM<FX,MI,Map,std::tuple<_Args...>, std::index_sequence<_AIs...>, std::index_sequence<_VIs...>, std::tuple<_NArgs...>>::__sigtable
+     = SigTableBuilder::get_table();
+
+template<typename FX, bool MI, template <typename...> class Map, typename..._Args, size_t..._AIs, size_t..._VIs, typename..._NArgs>
+typename multi_func_TM<FX,MI,Map,std::tuple<_Args...>, std::index_sequence<_AIs...>, std::index_sequence<_VIs...>, std::tuple<_NArgs...>>::__mvfunc_map_type
+    multi_func_TM<FX,MI,Map,std::tuple<_Args...>, std::index_sequence<_AIs...>, std::index_sequence<_VIs...>, std::tuple<_NArgs...>>::__mvfunc_map;
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+template<typename FX, bool MI,
+        template <typename...> class Map = std::unordered_map,
+        typename Args=typename resolve_virtual_signature<typename FX::type>::arg_types, 
+        typename _return_type = typename resolve_virtual_signature<typename FX::type>::return_type
+        >
+struct multi_func_TM_i;
+
+
+
+template<typename FX, bool MI, template <typename...> class Map, typename..._Args, typename _return_type>
+struct multi_func_TM_i<FX, MI, Map, std::tuple<_Args...>, _return_type>
+    : multi_func_TM<FX,MI,Map>
+{
+    using multi_func_TM<FX,MI,Map>::multi_func_TM;
+
+    _return_type operator()(_Args...args) {
+        return multi_func_TM<FX,MI,Map>::_call(std::forward<_Args>(args)...);
+    }
+
+    _return_type call(_Args...args) {
+        return multi_func_TM<FX,MI,Map>::_call(std::forward<_Args>(args)...);
+    }
+};
+
+
+template<typename FX, bool MI, template <typename...> class Map, typename..._Args>
+struct multi_func_TM_i<FX, MI, Map, std::tuple<_Args...>, void>
+    : multi_func_TM<FX,MI,Map>
+{
+    using multi_func_TM<FX,MI,Map>::multi_func_TM;
+
+    void operator()(_Args...args) {
+        multi_func_TM<FX,MI,Map>::_call(std::forward<_Args>(args)...);
+    }
+
+    void call(_Args...args) {
+        multi_func_TM<FX,MI,Map>::_call(std::forward<_Args>(args)...);
+    }
+};
+
+
+
+}//end-namespace vane_detail////////////////////////////////////////////////////////
+
+
+template<typename...Ts> using virtual_func = vane_detail::virtual_func_nonVf<Ts...>;
+
+template<typename FX, bool MI=false, template <typename...> class Map=std::unordered_map, typename...Ts>
+using multi_func  = vane_detail::multi_func_TM_i<FX,MI,Map,Ts...>;
+
+
+
+}//namespace vane/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#endif  //___VANE_H_20170719
