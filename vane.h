@@ -32,32 +32,28 @@ SOFTWARE.
 #include <array>
 #include <algorithm>
 #include <utility>
-#include <assert.h>
 #include <tuple>
 #include <iterator>
 #include <typeinfo>
 #include <exception>
 #include <unordered_map>
-#include <bits/functional_hash.h>
-#include <iostream>
 #include <functional>
 #include <vector>
-#include <iomanip>
 #include <typeinfo>
 #include <numeric>
+#include <memory>
+#include <assert.h>
 
 namespace vane {/////////////////////////////////////////////////////////////////////////////////////////////
 
 
 template<typename...> using __void_t = void;
-//template <bool>   struct __bool_t { };
-//template <typename...>    struct __empty_t { };
 template<typename T,T...> using void_v = void;
 
 /*--------------------------------------------
     make_static<Ts...>
 */
-    template <typename...Ts> struct make_static;
+template <typename...Ts> struct make_static;
 
 
 /*--------------------------------------------
@@ -441,7 +437,7 @@ constexpr int iseq_at = __iseq_at<I,Seq>::value;
 
 
 /*---------------------------------------------------------------------------------------------
-    __T_value_v<T,int,3>    ;--> T::value or (int)3
+    __T_value_v<T,int,3>
 */
 template<typename T, typename V, V val, typename=void_v<V>>
 struct __T_value : std::integral_constant<V,val> {};
@@ -453,7 +449,7 @@ template<typename T, typename V, V val>
 constexpr auto __T_value_v = __T_value<T,V,val>::value;
 
 /*---------------------------------------------------------------------------------------------
-    __T_map_t<T, void>  ;--> typename T::map or void
+    __T_map_t<T, void>
 */
 template<typename T, typename X, typename=__void_t<X>>
 struct __T_map { using map = X; };
@@ -466,7 +462,7 @@ using __T_map_t = typename __T_map<T,X>::map;
 
 
 /*---------------------------------------------------------------------------------------------
-    __T_type_t<T, void> ;--> typename T::map or void
+    __T_type_t<T, void>
 */
 template<typename T, typename X, typename=__void_t<X>>
 struct __T_type { using map = X; };
@@ -782,7 +778,6 @@ using type_map2 = __type_map<Tuple,Filter,std::make_index_sequence<std::tuple_si
 
 /*---------------------------------------------------------------------------------------------
     type_mapv
-
 */
 template<typename Tuple, template<typename,size_t,typename,typename...> class Mapper, typename Seq=std::make_index_sequence<std::tuple_size<Tuple>::value>, typename...FilterParam>
 struct __type_mapv;
@@ -1024,7 +1019,7 @@ namespace type_filters {
 
 
 /*----------------------------------------------------------------
-    remove_const<T> :       const T *   --> T
+    remove_const<T>
 */
     template<typename T>
     struct remove_const  {
@@ -1632,7 +1627,6 @@ pointer_back_inserter(_Container& __x)
 
 
 /*-------------------------------------------------------
-    topology_sort
     topological_sort
 */
 template<typename List>
@@ -1694,20 +1688,9 @@ const std::array<const TypeInfoEntry, std::tuple_size<std::tuple<T...>>::value> 
 
 
 /*---------------------------------------------------------------------
-    mf_ggard    
+    mf_init()
 */
 namespace vane_detail {///////////////////////////////////////////////////////////////////////
-
-    template <typename T=void>
-    struct __mf_global_varg_guard {
-        static bool __init;
-        static bool init() { return true; }
-    };
-
-    template <typename T>
-    bool __mf_global_varg_guard<T>::__init;
-
-
 
     template<typename __VID=int>
     struct __MFCache {
@@ -1719,7 +1702,6 @@ namespace vane_detail {/////////////////////////////////////////////////////////
             return __vid[i];
         }
 
-
     private:
         static __VID *__vid;
     };
@@ -1727,25 +1709,49 @@ namespace vane_detail {/////////////////////////////////////////////////////////
     template<typename __VID>
     __VID *__MFCache<__VID>::__vid;
 
-    struct _MF_init
+
+
+
+    class _MF_init
     {
-        using initor_type = std::function<void()>;
+        template<typename=void>
+        struct _init_flag {
+            static bool __initialized;
+        };
 
         static auto &get_initors() {
             static std::vector<initor_type>  __initors;
             return __initors;
         }
 
+    public:
+        using initor_type = std::function<void()>;
+
         static void init()
         {
-            vane_detail::__mf_global_varg_guard<>::__init = true;
+            _init_flag<>::__initialized = true;
 
             for(auto f : get_initors() )
                 f();
         }
 
         static void add_initor(initor_type f) { get_initors().push_back(f); }
+
+        static
+        void __check_mf_init() {
+            if( !_init_flag<>::__initialized ) {
+                fputs("\n\nERROR: vane::mf_init() is not called.\n\tterminating the program...\n\n", stderr);
+                exit(1);
+            }
+        }
     };
+
+    template<typename T>
+    bool _MF_init::_init_flag<T>::__initialized;
+
+    inline void __check_mf_init() {
+        _MF_init::__check_mf_init();
+    }
 
 }//end-namespace vane_detail //////////////////////////////////////////////////////////////////
 
@@ -1754,6 +1760,8 @@ namespace vane_detail {/////////////////////////////////////////////////////////
 inline void mf_init() {
     vane_detail::_MF_init::init();
 }
+
+
 
 
 template<typename T, typename F>
@@ -1778,29 +1786,14 @@ struct vtype
 {
     using vtypeid_type  = int;
 
-    vtype(vtypeid_type id) : _vtypeid(id) { __check_mf_init(); }
+    vtype(vtypeid_type id) : _vtypeid(id) { }
 
     virtual ~vtype() = 0;
 
     vtypeid_type vtypeid() const { return _vtypeid; }
 
-
-public:
+protected:
     vtypeid_type    _vtypeid;
-
-
-    static
-    void __check_mf_init() {
-        if( ! vane_detail::__mf_global_varg_guard<>::__init ) {
-            __exit();
-        }
-    }
-private:
-    static
-    void __exit() {
-        fputs("\n\nERROR: vane::mf_init() is not called.\n\tterminating the program...\n\n", stderr);
-        exit(1);
-    }
 };
 
 inline vtype::~vtype() {}
@@ -1811,6 +1804,15 @@ struct is_vtype : std::is_base_of<vtype,T> {};
 
 template<typename T>
 bool is_vtype_v = is_vtype<T>::value;
+
+
+
+
+template<typename T, typename S>
+T *get(S *v);
+template<typename T, typename S>
+T &get(S &v);
+
 
 
 
@@ -2330,7 +2332,7 @@ unsigned reduce_sigs(Iter sig_first, Iter sig_last, const Castmaps &castmaps, in
 
             do_reduce();
         }
-    }//end-if( 1 < sigc )  //check exact type matches
+    }
 
 
 
@@ -2382,13 +2384,14 @@ unsigned find_closest_bases_from_castmap(const __CastmapRow &castmap, int *bases
 
 
 
+
+
+
 /*---------------------------------------------------------------------
     virtual_<>
 */
 struct __virt : vtype
 {
-//  using vtypeid_type  = int;
-
     virtual ~__virt() = 0;
 
     __virt(vtypeid_type id) : vtype(id) {}
@@ -2403,6 +2406,8 @@ namespace vane_detail {
     template<typename __Domain, typename __BaseType, bool __MI>
     struct __VTypemap_typemap_base;
 }
+
+
 
 
 
@@ -2468,6 +2473,14 @@ public:
     };
 
 
+    operator __BasePoly&() {
+        return *get<__BasePoly>(this);
+    }
+
+    operator const __BasePoly&() const {
+        return *get<const __BasePoly>(this);
+    }
+
 
     using vdiff_type = int;
     vdiff_type  _vdiff;
@@ -2493,7 +2506,6 @@ typename __virt::vtypeid_type  virtual_<__BasePoly>::of<__T,__Root>::__vtypeid =
 
 
 
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 template<typename X, typename B>
 constexpr inline
@@ -2501,28 +2513,32 @@ X *get(virtual_<B> *v) {
     assert( (X*)((char*)v + cast_diff<X*, typename virtual_<B>::template of<X>*>()) == static_cast<typename virtual_<B>::template of<X>*>(v) );
     return (X*)((char*)v + cast_diff<X*, typename virtual_<B>::template of<X>*>());
 }
+
 template<typename X, typename B>
 inline
 X &get(virtual_<B> &v) {
     return *get<X*>(&v);
 }
 
-    template<typename X, typename B>
-    inline
-    X *get(const virtual_<B> *v) {
-        assert( (X*)((char*)v + cast_diff<X*, const typename virtual_<B>::template of<X>*>()) == static_cast<const typename virtual_<B>::template of<X>*>(v) );
-        return (X*)((char*)v + cast_diff<X*, const typename virtual_<B>::template of<X>*>());
-    }
-    template<typename X, typename B>
-    inline
-    X &get(const virtual_<B> &v) {
-        return *get<X*>(&v);
-    }
+template<typename X, typename B>
+inline
+const X *get(const virtual_<B> *v) {
+    assert( (const X*)((char*)v + cast_diff<const X*, const typename virtual_<B>::template of<X>*>()) == static_cast<const typename virtual_<B>::template of<X>*>(v) );
+    return (const X*)((char*)v + cast_diff<const X*, const typename virtual_<B>::template of<X>*>());
+}
+
+template<typename X, typename B>
+inline
+const X &get(const virtual_<B> &v) {
+    return *get<X>(&v);
+}
+
 
 
 
 template<typename T>
 struct is_virt : std::is_base_of<__virt,T> {};
+
 
 
 
@@ -2611,8 +2627,7 @@ protected:
 
     template<typename __Domain, typename __BaseType, bool __MI>
     friend struct vane::vane_detail::__VTypemap_typemap_base;
-
-};//struct var<___SI>
+};
 
 
 
@@ -2658,11 +2673,11 @@ namespace _vane_detail {////////////////////////////////////////////////////////
     template<typename X, typename...Tags>
     struct __var_getter<X, const var<Tags...>,false>
     {
-        static X &get(const var<Tags...> &v) {
-            return *static_cast<const typename var<Tags...>::template of<X>*>(&v);
+        static const X &get(const var<Tags...> &v) {
+            return *static_cast<const typename var<Tags...>::template of<const X>*>(&v);
         }
 
-        static X *get(const var<Tags...> *v) {
+        static const X *get(const var<Tags...> *v) {
             return &get(*v);
         }
     };
@@ -2670,11 +2685,11 @@ namespace _vane_detail {////////////////////////////////////////////////////////
     template<typename X, typename...__Tags>
     struct __var_getter<X, const var<__Tags...>,true>
     {
-        static X &get(const var<__Tags...> &v) {
+        static const X &get(const var<__Tags...> &v) {
             return static_cast<X&>(v);
         }
 
-        static X *get(const var<__Tags...> *v) {
+        static const X *get(const var<__Tags...> *v) {
             return &get(*v);
         }
     };
@@ -2696,14 +2711,14 @@ X *get(var<Tags...> *v) {
 
 template<typename X, typename...Tags>
 inline
-X &get(const var<Tags...> &v) {
-    return _vane_detail::__var_getter<X,const var<Tags...>>::get(v);
+const X &get(const var<Tags...> &v) {
+    return _vane_detail::__var_getter<const X,const var<Tags...>>::get(v);
 }
 
 template<typename X, typename...Tags>
 inline
-X *get(const var<Tags...> *v) {
-    return _vane_detail::__var_getter<X,const var<Tags...>>::get(v);
+const X *get(const var<Tags...> *v) {
+    return _vane_detail::__var_getter<const X,const var<Tags...>>::get(v);
 }
 
 template<typename X, typename T>
@@ -2719,9 +2734,36 @@ X *get(T *v) {
 }
 
 
+template<typename X, typename T>
+inline
+const X &get(const T &v) {
+    return static_cast<const X&>(v);
+}
+
+template<typename X, typename T>
+inline
+const X *get(const T *v) {
+    return &get<X>(*v);
+}
+
 
 template<typename T>
 struct is_var : std::is_base_of<__var,T> {};
+
+
+
+template <typename T, typename V, typename...Args>
+inline std::shared_ptr<typename V::template of<T>>
+make_shared(Args&&...args) {
+    return std::make_shared<typename V::template of<T>>(std::forward<Args>(args)...);
+}
+
+template <typename T, typename V, typename...Args>
+inline std::unique_ptr<typename V::template of<T>>
+make_unique(Args&&...args) {
+    return std::make_unique<typename V::template of<T>>(std::forward<Args>(args)...);
+}
+
 
 
 namespace vane_detail {///////////////////////////////////////////////////////////////////////////////////////////
@@ -2911,27 +2953,24 @@ struct _Error_NO_MATCH_Helper<__MF,true>
 
 
 //exceptions
-namespace multifunc_error {
+struct multifunc_error : std::runtime_error {
+    multifunc_error(const char *m="multi-func error") : runtime_error(m) {}
+};
 
-    struct multifunc_error : std::runtime_error {
-        multifunc_error(const char *m="multi-func error") : runtime_error(m) {}
-    };
+struct bad_call : multifunc_error {
+    bad_call(const char *m="multi-func error: invalid call: no matching function or ambiguous call") 
+        : multifunc_error(m) {}
+};
 
-    struct invalid_call : multifunc_error {
-        invalid_call(const char *m="multi-func error: invalid function call: no matching function or ambiguous call") 
-            : multifunc_error(m) {}
-    };
+struct bad_type : bad_call {
+    bad_type(const char *m="multi-func error: invalid argument type: out of the type-domain")
+        : bad_call(m) {}
+};
 
-    struct invalid_argument_type : invalid_call {
-        invalid_argument_type(const char *m="multi-func error: invalid argument type: out of the type-domain")
-            : invalid_call(m) {}
-    };
-
-    struct multi_inheritance_detected : multifunc_error {
-        multi_inheritance_detected (const char *m="multi-func error: multi-inheritance detected")
-            : multifunc_error(m) {}
-    };
-}
+struct multi_inheritance_detected : multifunc_error {
+    multi_inheritance_detected (const char *m="multi-func error: multiple-inheritance detected")
+        : multifunc_error(m) {}
+};
 
 
 namespace vane_detail {///////////////////////////////////////////////////////////////////////////////////////////
@@ -2939,17 +2978,17 @@ namespace vane_detail {/////////////////////////////////////////////////////////
 struct __vane_error {
     static __attribute__((noreturn)) __attribute__((noinline)) 
     void __throw_OOD() {
-        throw multifunc_error::invalid_argument_type();
+        throw bad_type();
     }
 
     static __attribute__((noreturn)) __attribute__((noinline)) 
     void __throw_NO_MATCH() {
-        throw multifunc_error::invalid_call();
+        throw bad_call();
     }
 
     static __attribute__((noreturn)) __attribute__((noinline)) 
     void __throw_MI_detected() {
-        throw multifunc_error::multi_inheritance_detected();
+        throw multi_inheritance_detected();
     }
 };
 
@@ -3583,13 +3622,13 @@ public:
     enum { __isMI = false };
 
 
-    static void  *init() { return false ? &__instance : nullptr; }  //static_init
+    static void  *init() { return false ? &__instance : nullptr; }
     static _Self &get()  { return __instance; }
 
-    static auto get_type_index(const base_type *arg) {  //typemap_cell_type
+    static auto get_type_index(const base_type *arg) {
         return get()._get_type_index(arg);
     }
-    static auto get_type_index(const base_type &arg) {  //typemap_cell_type
+    static auto get_type_index(const base_type &arg) {
         return get()._get_type_index(arg);
     }
 
@@ -3719,7 +3758,7 @@ public:
     __MapType                       _vtypemap;
 
 protected:
-    _vtypemap_poly() {  //ctor
+    _vtypemap_poly() {
         assert( this == &get() );
         _typemap.push_back( this->_TYPEMAP_CELL_UNDEFINED );
         assert( _typemap.size() == 1 );
@@ -3896,7 +3935,7 @@ using _remove_virt_tags = type_map<Args, _mapper_remove_virt_tag>;
 
 template<typename Arg, size_t I, typename Tuple>
 struct _mapper_flag_virtual_arg { 
-    using map = iseq_n< std::tuple_size< typename _remove_static_tag<Arg>::type >::value, !_is_static_arg<Arg>::value || basetype_is_base_of<__var,Arg>::value>;    //var----new
+    using map = iseq_n< std::tuple_size< typename _remove_static_tag<Arg>::type >::value, !_is_static_arg<Arg>::value || basetype_is_base_of<__var,Arg>::value>;
 };
 
 
@@ -4314,7 +4353,7 @@ public:
     std::conditional_t<std::is_rvalue_reference<S>::value,T,T&>
     forward(SS &__s)
     {
-        using Domain  = typename std::tuple_element<__I,typename __MF::Domains>::type;
+        using Domain  = typename std::tuple_element<__I,typename __MF::domains>::type;
         using TypeMap = vtypemap<Domain, SS, __MI>;
 
         TypeMap::init();
@@ -4327,7 +4366,7 @@ public:
     TT*
     forward(SS *__s) noexcept
     {
-        using Domain  = typename std::tuple_element<__I,typename __MF::Domains>::type;
+        using Domain  = typename std::tuple_element<__I,typename __MF::domains>::type;
         using TypeMap = vtypemap<Domain, SS, __MI>;
 
         TypeMap::init();
@@ -4349,7 +4388,7 @@ public:
     std::conditional_t<std::is_rvalue_reference<S>::value,T,T&>
     forward(SS &__s)
     {
-        using Domain  = typename std::tuple_element<__I,typename __MF::Domains>::type;
+        using Domain  = typename std::tuple_element<__I,typename __MF::domains>::type;
         using TypeMap = vtypemap<Domain, SS, __isMI>;
 
         TypeMap::init();
@@ -4404,7 +4443,7 @@ public:
     static
     TT*
     forward(SS *__s) noexcept {
-        return vane::get<TT>(__s);
+        return vane::get<TT>(const_cast<std::remove_const_t<SS>*>(__s));
     }
 
 };
@@ -4422,7 +4461,7 @@ public:
     TT*
     forward(SS *__s) noexcept
     {
-        using Domain  = typename std::tuple_element<__I,typename __MF::Domains>::type;
+        using Domain  = typename std::tuple_element<__I,typename __MF::domains>::type;
         vtypemap<Domain, SS, false>::init();
 
         return vane::get<TT>(const_cast<std::remove_const_t<SS>*>(__s));
@@ -4435,7 +4474,7 @@ public:
     {
         remove_const_t<SS> &__s = const_cast<remove_const_t<SS>&>(__ss);
 
-        using Domain  = typename std::tuple_element<__I,typename __MF::Domains>::type;
+        using Domain  = typename std::tuple_element<__I,typename __MF::domains>::type;
         vtypemap<Domain, SS, false>::init();
 
         return static_cast<std::conditional_t<std::is_rvalue_reference<S>::value, T, T&>>(vane::get<TT>(__s));
@@ -4455,7 +4494,7 @@ public:
     std::conditional_t<std::is_rvalue_reference<S>::value,T,T&>
     forward(SS &__s)
     {
-        using Domain    = typename std::tuple_element<__I,typename __MF::Domains>::type;
+        using Domain    = typename std::tuple_element<__I,typename __MF::domains>::type;
         static_assert( 0 <= tuple_index<TT,Domain>, "argument type out of the domain");
 
         return static_cast<std::conditional_t<std::is_rvalue_reference<S>::value, T, T&>>(*vtypemap<Domain, SS, true>::template cast<TT>(__s.vtypeid(), &__s));
@@ -4466,7 +4505,7 @@ public:
     TT*
     forward(SS *__s) noexcept
     {
-        using Domain    = typename std::tuple_element<__I,typename __MF::Domains>::type;
+        using Domain    = typename std::tuple_element<__I,typename __MF::domains>::type;
         static_assert( 0 <= tuple_index<std::remove_const_t<TT>,Domain>, "argument type out of the domain");
 
         return vtypemap<Domain, SS, true>::template cast<TT>(__s->vtypeid(), __s);
@@ -4739,6 +4778,8 @@ protected:
     virtual_func_nonVf(_Return_type (*vfunc)(Self*,_NArgs...)=nullptr) : _vfunc(vfunc) {}
 
 public:
+    using type = _Sig;
+
     _Return_type operator()(_Args...args) {
         typename VSig::arg_types    __args{std::forward<_Args>(args)...};
 
@@ -4776,6 +4817,8 @@ protected:
     virtual_func_nonVf(_Return_type (*vfunc)(Self*,_NArgs...)=nullptr) : _vfunc(vfunc) {}
 
 public:
+    using type = _Sig;
+
     void operator()(_Args...args) {
         typename VSig::arg_types    __args{std::forward<_Args>(args)...};
 
@@ -4846,7 +4889,7 @@ public:
     using SigTableBuilder = __SigTableBuilder<Self, domains>;
     using sigtable_type   = typename SigTableBuilder::table_type;
 
-    static_assert(__isMI || !domains_multi_inherited<domains>, "multi-inheritance detected");
+    static_assert(__isMI || !domains_multi_inherited<domains>, "multiple-inheritance detected");
 
 
 
@@ -4955,6 +4998,10 @@ protected:
     static _Return_type
     __vcall(Super *__this, _NArgs...args)
     {
+#ifndef NDEBUG
+        __check_mf_init();
+#endif
+
         std::tuple<_NArgs...>   __args{std::forward<_NArgs>(args)...};
         enum { use_cache = __isMI && (ARGC_POLY>0) };
         int vid[use_cache ? VARGC : 0];
@@ -5007,7 +5054,7 @@ public:
         TypeMap &tmap = TypeMap::get();
 
         const auto vid = &typeid(*arg);
-        if( tmap.update_maps(vid, arg) == TypeMap::_TYPEMAP_CELL_UNDEFINED )
+        if( tmap.update_maps(vid, arg) == TypeMap::_TYPEMAP_CELL_INVALID)
             error = true;
     }
 
@@ -5334,5 +5381,6 @@ using multi_func  = vane_detail::multi_func_TM_i<FX,MI,Map,Ts...>;
 
 
 
-}//namespace vane/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+}//namespace vane//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #endif  //___VANE_H_20170719
+// vim: ts=4
