@@ -3418,7 +3418,7 @@ struct _VTM_base_vtype_MI
     , _VTypemap_base_castmap <__Domain, __BaseType, __CellType, __MI>
 {
     template<typename BaseType>
-    auto update_maps(int vid, const BaseType *arg)
+    auto update(int vid, const BaseType *arg)
     {
         auto *castrow = __new_castmap_row(this->_castmap, vid);
         if( castrow )
@@ -3503,7 +3503,7 @@ struct _VTM_base_vtype_SI
     using castmap_cell_type = typename _VTypemap_base_castmap <__Domain, __BaseType, __CellType, __MI>::castmap_cell_type;
 
     template<typename BaseType>
-    auto update_maps(int vid, const BaseType *arg)
+    auto update(int vid, const BaseType *arg)
     {
         std::array<castmap_cell_type, std::tuple_size<__Domain>::value>  row;
         this->template __build_castmap_row<__Domain>(row, arg);
@@ -3712,7 +3712,7 @@ public:
         return tix;
     }
 
-    auto update_maps(const std::type_info *vid, const base_type *arg)
+    auto update(const std::type_info *vid, const base_type *arg)
     {
         std::array<int, std::tuple_size<Domain>::value>  row;
         this->template __build_castmap_row<__Domain>(row, arg);
@@ -3819,7 +3819,7 @@ protected:
     }
 
 public:
-    auto update_maps(const base_type *arg)
+    auto update(const base_type *arg)
     {
         _Self::init();
         auto type_info = &typeid(*arg);
@@ -4874,6 +4874,7 @@ public:
 
 
 
+    using type  = typename _FX::type;
     using VFunc = typename make_signature<typename VSig::_Return_type, tuple_cat_t<std::tuple<FX*>, typename VSig::arg_types>>::type*;
 
     using _ArgDef = __ArgDef__<VSig, typename FX::domains>;
@@ -5033,7 +5034,7 @@ public:
         int vid = arg->vtypeid();
         int mix = tmap._multimap[vid];
         if( mix == TypeMap::_MULTIMAP_CELL_UNDEFINED ) {
-            if( tmap.update_maps(vid, arg) == TypeMap::_MULTIMAP_CELL_INVALID ) {
+            if( tmap.update(vid, arg) == TypeMap::_MULTIMAP_CELL_INVALID ) {
                 error = true;
                 assert( tmap._typemap[vid] == TypeMap::_TYPEMAP_CELL_UNDEFINED );
             }
@@ -5054,7 +5055,7 @@ public:
         TypeMap &tmap = TypeMap::get();
 
         const auto vid = &typeid(*arg);
-        if( tmap.update_maps(vid, arg) == TypeMap::_TYPEMAP_CELL_INVALID)
+        if( tmap.update(vid, arg) == TypeMap::_TYPEMAP_CELL_INVALID)
             error = true;
     }
 
@@ -5121,7 +5122,7 @@ public:
             int vid = arg->vtypeid();
             int mix = tmap._multimap[vid];
 
-            mix = tmap.update_maps(vid,arg);
+            mix = tmap.update(vid,arg);
             assert( mix != TypeMap::_MULTIMAP_CELL_UNDEFINED );
 
             if( mix == TypeMap::_MULTIMAP_CELL_INVALID ) {
@@ -5149,7 +5150,7 @@ public:
 
             int vid = std::get<I>(_vid);
             if( vid==0 ) {
-                vid = tmap.update_maps(arg);
+                vid = tmap.update(arg);
             }
             assert( vid );
 
@@ -5374,7 +5375,8 @@ struct multi_func_TM_i<FX, MI, Map, std::tuple<_Args...>, void>
 }//end-namespace vane_detail////////////////////////////////////////////////////////
 
 
-template<typename...Ts> using virtual_func = vane_detail::virtual_func_nonVf<Ts...>;
+template<typename...Ts>
+using virtual_func = vane_detail::virtual_func_nonVf<Ts...>;
 
 template<typename FX, bool MI=false, template <typename...> class Map=std::unordered_map, typename...Ts>
 using multi_func  = vane_detail::multi_func_TM_i<FX,MI,Map,Ts...>;
