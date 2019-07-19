@@ -42,7 +42,13 @@ SOFTWARE.
 #include <typeinfo>
 #include <numeric>
 #include <memory>
+#include <stdexcept>
 #include <assert.h>
+#if defined(__CYGWIN__)
+#	include <w32api/windows.h>
+#elif defined (__MINGW32__)
+#	include <windows.h>
+#endif
 
 namespace vane {/////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1478,54 +1484,401 @@ protected:
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
-template<typename __T>
+template<typename __T, unsigned __I=1>
 class gstack_allocator
 {
 public:
-    using size_type         = size_t;
-    using difference_type   = ptrdiff_t;
-    using pointer           = __T*;
-    using const_pointer     = const __T*;
-    using reference         = __T&;
-    using const_reference   = const __T&;
-    using value_type        = __T;
+	using size_type			= size_t;
+	using difference_type	= ptrdiff_t;
+	using pointer			= __T*;
+	using const_pointer		= const __T*;
+	using reference			= __T&;
+	using const_reference	= const __T&;
+	using value_type		= __T;
 
-    template<typename __T1>
-    struct rebind
-    { typedef gstack_allocator<__T1> other; };
-
-    gstack_allocator() noexcept { }
-    gstack_allocator(const gstack_allocator&) noexcept { }
-    ~gstack_allocator() noexcept { }
-
-    template<typename __T1>
-    gstack_allocator(const gstack_allocator<__T1>&) noexcept{ }
+	template<typename __T1>
+	struct rebind {
+		using other = gstack_allocator<__T1,__I>; 
+	};
 
 
+	gstack_allocator() noexcept : gstack_allocator(stacked_allocator<__I>::get_instance()) { }
+	gstack_allocator(gstack<__I> &gs) noexcept : gstack_allocator(gs.get_allocator()) { }
+	gstack_allocator(stacked_allocator<__I> &sa) noexcept : _allocator(&sa) {
+		assert(_allocator);
+	}
+	template<typename __T1>
+	gstack_allocator(const gstack_allocator<__T1,__I> &ga) noexcept : gstack_allocator(ga.get_allocator()) { }
 
-    __T *allocate(size_t n, const void *p = 0)
-    {
-        return static_cast<__T*>(__get_stacked_allocator().allocate(n * sizeof(__T)));
-    }
 
-    void deallocate(__T *p, size_t n) { }
+	~gstack_allocator() noexcept { }
+
+
+
+	__T *allocate(size_t n, const void *p= 0)
+	{
+		(void)p;
+		return static_cast<__T*>(get_allocator().allocate(n * sizeof(__T)));
+	}
+
+	void deallocate(__T *, size_t) noexcept { }
+
+
+	auto &get_allocator() const noexcept {
+		return *_allocator;
+	}
 
 protected:
-    static auto &__get_stacked_allocator() {
-        return stacked_allocator<>::get_instance();
-    }
+	stacked_allocator<__I>	 *_allocator;
 
-};
+}; //gstack_allocator
 
-template<typename __T>
+
+
+template<typename __T,unsigned __I>
 inline
-bool operator==(const gstack_allocator<__T>&, const gstack_allocator<__T>&)
+bool operator==(const gstack_allocator<__T,__I>&, const gstack_allocator<__T,__I>&)
 { return true; }
 
-template<typename __T>
+template<typename __T,unsigned __I>
 inline 
-bool operator!=(const gstack_allocator<__T>&, const gstack_allocator<__T>&)
+bool operator!=(const gstack_allocator<__T,__I>&, const gstack_allocator<__T,__I>&)
 { return false; }
+
+
+
+
+//gs_array //////////////////////////////////////////////////////////////////////////
+template<typename __T, long __SIZE=-1, size_t __GSI=1>
+struct gs_array
+{
+	static_assert( __SIZE >= 0, "");
+
+	using value_type			 = __T;
+	using pointer				 = __T*;
+	using const_pointer			 = const __T*;
+	using reference				 = __T&;
+	using const_reference		 = const __T&;
+	using iterator   			 = pointer;
+	using const_iterator  		 = const_pointer;
+	using reverse_iterator		 = std::reverse_iterator<iterator>;
+	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+	using size_type			= size_t;
+	using difference_type	= ptrdiff_t;
+
+
+	gs_array(const gs_array&) = delete;
+	gs_array &operator=(const gs_array&) = delete;
+	gs_array(gs_array &&a) = default;
+	gs_array &operator=(gs_array&&) = default;
+
+
+	gs_array()
+		: _data( stacked_allocator<__GSI>::get_instance().template alloc<__T[]>(size()) )
+	{ }
+	template<typename...Args>
+	gs_array(Args&&...args)
+		: _data( stacked_allocator<__GSI>::get_instance().template alloc<__T[]>(size(), std::forward<Args>(args)...) )
+	{ }
+
+	gs_array(gstack_allocator<__T,__GSI> gsa)
+		: _data( gsa.get_allocator().template alloc<__T[]>(size()) )
+	{ }
+
+	template<typename...Args>
+	gs_array(gstack_allocator<__T,__GSI> gsa, Args&&...args)
+		: _data( gsa.get_allocator().template alloc<__T[]>(size(), std::forward<Args>(args)...) )
+	{ }
+
+	gs_array(gstack<__GSI> &gs)
+		: _data( gs.get_allocator().template alloc<__T[]>(size()) )
+	{ }
+	template<typename...Args>
+	gs_array(gstack<__GSI> &gs, Args&&...args)
+		: _data( gs.get_allocator().template alloc<__T[]>(size(), std::forward<Args>(args)...) )
+	{ }
+
+
+
+	reference
+	operator[](size_type i) {
+		return __SIZE ? _data[i] : *(value_type*)nullptr;
+	}
+
+	const_reference
+	operator[](size_type i) const {
+		return __SIZE ? _data[i] : *(value_type*)nullptr;
+	}
+
+	pointer
+	data() {
+		return __SIZE ? _data.get() : nullptr;
+	}
+
+	const_pointer
+	data() const {
+		return _data.get();
+	}
+
+	reference
+	front() {
+		return __SIZE ? _data[0] : *(value_type*)nullptr;
+	}
+	const_reference
+	front() const {
+		return __SIZE ? _data[0] : *(value_type*)nullptr;
+	}
+
+	reference
+	back() {
+		return __SIZE ? _data[__SIZE-1] : *(value_type*)nullptr;
+	}
+	const_reference
+	back() const {
+		return __SIZE ? _data[__SIZE-1] : *(value_type*)nullptr;
+	}
+
+	constexpr bool		empty() noexcept	{ return __SIZE==0; }
+	constexpr size_type	size()  noexcept	{ return __SIZE;    }
+
+	iterator begin() noexcept	{ return iterator(data()); }
+	iterator end()   noexcept	{ return iterator(data() + __SIZE); }
+
+	reverse_iterator rbegin() noexcept		{ return reverse_iterator(end()); }
+	reverse_iterator rend()   noexcept		{ return reverse_iterator(begin()); }
+
+	const_iterator begin() const noexcept	{ return const_iterator(data()); }
+	const_iterator end()   const noexcept	{ return const_iterator(data() + __SIZE); }
+
+	const_iterator cbegin() const noexcept	{ return const_iterator(data()); }
+	const_iterator cend()   const noexcept	{ return const_iterator(data() + __SIZE); }
+
+	const_reverse_iterator rbegin() const noexcept	{ return const_reverse_iterator(end()); }
+	const_reverse_iterator rend()   const noexcept	{ return const_reverse_iterator(begin()); }
+
+	const_reverse_iterator crbegin() const noexcept	{ return const_reverse_iterator(end()); }
+	const_reverse_iterator crend()   const noexcept	{ return const_reverse_iterator(begin()); }
+
+
+	void fill(const value_type &v) {
+		std::fill_n(begin(), size(), v);
+	}
+
+
+	operator std::array<__T,__SIZE>&() {
+		return *(std::array<__T,__SIZE>*)data();
+	}
+
+	std::array<__T,__SIZE>  &as_array() const {
+		return *reinterpret_cast<std::array<__T,__SIZE>*>(data());
+	}
+
+
+private:
+	static auto fff() {
+		gstack<>	gs;
+		return gs.alloc<__T[]>(1);
+	}
+	using data_ptr = decltype(fff());
+
+protected:
+	data_ptr	_data;
+
+
+	friend struct gs_array<__T,-1,__GSI>;
+};
+
+
+template<typename __T, size_t __SIZE>
+inline bool 
+operator==(const gs_array<__T, __SIZE> &a, const gs_array<__T, __SIZE> &b)
+{ return std::equal(a.begin(), a.end(), b.begin()); }
+
+template<typename __T, size_t __SIZE>
+inline bool
+operator!=(const gs_array<__T, __SIZE> &a, const gs_array<__T, __SIZE> &b)
+{ return !(a == b); }
+
+template<typename __T, size_t __SIZE>
+inline bool
+operator<(const gs_array<__T, __SIZE> &a, const gs_array<__T, __SIZE> &b) { 
+	return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end()); 
+}
+
+template<typename __T, size_t __SIZE>
+inline bool
+operator>(const gs_array<__T, __SIZE> &a, const gs_array<__T, __SIZE> &b)
+{ return b < a; }
+
+template<typename __T, size_t __SIZE>
+inline bool
+operator<=(const gs_array<__T, __SIZE> &a, const gs_array<__T, __SIZE> &b)
+{ return !(a > b); }
+
+template<typename __T, size_t __SIZE>
+inline bool
+operator>=(const gs_array<__T, __SIZE> &a, const gs_array<__T, __SIZE> &b)
+{ return !(a < b); }
+
+
+
+template<typename __T, size_t __GSI>
+struct gs_array<__T,-1,__GSI>
+{
+	using value_type			 = __T;
+	using pointer				 = __T*;
+	using const_pointer			 = const __T*;
+	using reference				 = __T&;
+	using const_reference		 = const __T&;
+	using iterator   			 = pointer;
+	using const_iterator  		 = const_pointer;
+	using reverse_iterator		 = std::reverse_iterator<iterator>;
+	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+	using size_type			= unsigned;
+	using difference_type	= ptrdiff_t;
+
+
+	gs_array(const gs_array&) = delete;
+	gs_array &operator=(const gs_array&) = delete;
+
+	template<long _SIZE>
+	gs_array(gs_array<__T,_SIZE,__GSI> &&a) {
+		//_size = 0;
+		_data = std::move(a._data);
+		_size = _SIZE<0 ? a._size : _SIZE;
+	}
+	template<long _SIZE>
+	gs_array &operator=(gs_array<__T,_SIZE,__GSI> &&a) {
+		//_size = 0;
+		_data = std::move(a._data);
+		_size = _SIZE<0 ? a._size : _SIZE;
+		return *this;
+	}
+
+
+	gs_array() {
+		_size = 0;
+	}
+
+	gs_array(unsigned size) {
+		assert( size );
+		_data = stacked_allocator<__GSI>::get_instance().template alloc<__T[]>(size);
+		_size = size;
+	}
+
+	template<typename...Args>
+	gs_array(unsigned size, Args&&...args) : _size(0) {
+		assert( size );
+		_data = stacked_allocator<__GSI>::get_instance().template alloc<__T[]>(size, std::forward<Args>(args)...);
+		_size = size;
+	}
+	gs_array(unsigned size, gstack_allocator<__T,__GSI> &gsa) {
+		assert( size );
+		_data = gsa.get_allocator().template alloc<__T[]>(size);
+		_size = size;
+	}
+
+	gs_array(gstack_allocator<__T,__GSI> &gsa, unsigned size) {
+		assert( size );
+		_data = gsa.get_allocator().template alloc<__T[]>(size);
+		_size = size;
+	}
+	template<typename...Args>
+	gs_array(gstack_allocator<__T,__GSI> &gsa, unsigned size, Args&&...args) : _size(0) {
+		assert( size );
+		_data = gsa.get_allocator().template alloc<__T[]>(size, std::forward<Args>(args)...);
+		_size = size;
+	}
+
+	gs_array(unsigned size, gstack<__GSI> &gs) {
+		assert( size );
+		_data = gs.get_allocator().template alloc<__T[]>(size);
+		_size = size;
+	}
+
+	gs_array(gstack<__GSI> &gs, unsigned size) {
+		assert( size );
+		_data = gs.get_allocator().template alloc<__T[]>(size);
+		_size = size;
+	}
+	template<typename...Args>
+	gs_array(gstack<__GSI> &gs, unsigned size, Args&&...args) : _size(0) {
+		assert( size );
+		_data = gs.get_allocator().template alloc<__T[]>(size, std::forward<Args>(args)...);
+		_size = size;
+	}
+
+
+	__T& operator[](size_type i)				{ return _data[i]; }
+	const __T& operator[](size_type i) const	{ return _data[i]; }
+
+
+	__T *data()				{ return _data.get(); }
+	const __T *data() const	{ return _data.get(); }
+
+	__T &front()				{ return _data[0]; }
+	const __T &front() const	{ return _data[0]; }
+
+	__T &back()				{ return _data[_size-1]; }
+	const __T &back() const	{ return _data[_size-1]; }
+
+
+	bool		empty() noexcept	{ return _size==0; }
+	size_type	size()  noexcept	{ return _size;    }
+
+	iterator begin() noexcept	{ return iterator(data()); }
+	iterator end()   noexcept	{ return iterator(data() + _size); }
+
+	reverse_iterator rbegin() noexcept		{ return reverse_iterator(end()); }
+	reverse_iterator rend()   noexcept		{ return reverse_iterator(begin()); }
+
+	const_iterator begin() const noexcept	{ return const_iterator(data()); }
+	const_iterator end()   const noexcept	{ return const_iterator(data() + _size); }
+
+	const_iterator cbegin() const noexcept	{ return const_iterator(data()); }
+	const_iterator cend()   const noexcept	{ return const_iterator(data() + _size); }
+
+	const_reverse_iterator rbegin() const noexcept	{ return const_reverse_iterator(end()); }
+	const_reverse_iterator rend()   const noexcept	{ return const_reverse_iterator(begin()); }
+
+	const_reverse_iterator crbegin() const noexcept	{ return const_reverse_iterator(end()); }
+	const_reverse_iterator crend()   const noexcept	{ return const_reverse_iterator(begin()); }
+
+
+	void fill(const value_type &v) {
+		std::fill_n(begin(), size(), v);
+	}
+
+
+
+private:
+	static auto fff() {		//for MSC
+		gstack<>	gs;
+		gs.alloc<__T[]>(1);
+		return gs.alloc<__T[]>(1);
+	}
+	using data_ptr = decltype(fff());
+
+protected:
+	data_ptr	_data;
+
+
+
+	unsigned	_size;
+};
+
+
+
+
+template<typename __T=char, unsigned __GSI=1, typename __Traits=std::char_traits<__T>>
+using basic_gs_string = std::basic_string<__T, __Traits, gstack_allocator<__T,__GSI>>;
+
+template<unsigned __GSI=1>	using gs_string    = basic_gs_string<char>;
+template<unsigned __GSI=1>	using gs_wstring   = basic_gs_string<wchar_t>;
+template<unsigned __GSI=1>	using gs_u16string = basic_gs_string<char16_t>;
+template<unsigned __GSI=1>	using gs_u32string = basic_gs_string<char32_t>;
 
 
 
@@ -5384,5 +5737,40 @@ using multi_func  = vane_detail::multi_func_TM_i<FX,MI,Map,Ts...>;
 
 
 }//namespace vane//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+namespace std {/////////////////////////////////////////////////////////////////
+	template<size_t I, typename T, size_t SIZE>
+	inline
+	T &get(vane::gs_array<T,SIZE> &a) {
+		static_assert(I < SIZE, "index is out of bounds");
+		return a[I];
+	}
+
+	template<typename T, size_t SIZE>
+	struct tuple_size<vane::gs_array<T,SIZE>>
+	: public integral_constant<size_t, SIZE> { };
+
+
+	template<size_t I, typename T, size_t N>
+	struct tuple_element<I, vane::gs_array<T,N> > {
+		using type = T;
+	};
+
+	template<typename __T, unsigned __GSI, typename __Traits>
+	struct hash<vane::basic_gs_string<__T,__GSI,__Traits>> : __hash_base<size_t, vane::basic_gs_string<__T,__GSI,__Traits>>
+	{
+		size_t
+		operator()(const vane::basic_gs_string<__T,__GSI,__Traits> &__s) const noexcept
+		{ return std::_Hash_impl::hash(__s.data(), __s.length()); }
+	};
+
+	template<typename __T, unsigned __GSI, typename __Traits>
+	struct __is_fast_hash<hash<vane::basic_gs_string<__T,__GSI,__Traits>>> : std::false_type { };
+
+}//end-namespace std////////////////////////////////////////////////////////////
+
+
 #endif  //___VANE_H_20170719
 // vim: ts=4
