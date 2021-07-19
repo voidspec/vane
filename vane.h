@@ -45,24 +45,24 @@ SOFTWARE.
 #include <stdexcept>
 #include <assert.h>
 #if defined(__CYGWIN__)
-#	include <w32api/windows.h>
+#   include <w32api/windows.h>
 #elif defined (__MINGW32__)
-#	include <windows.h>
+#   include <windows.h>
 #endif
 
 namespace vane {/////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifdef	__GNUC__
-#	define __vane_forceinline	inline	__attribute__((__always_inline__))
-#	define __vane_noinline				__attribute__ ((__noinline__))
-#	ifndef	__forceinline
-#		define __forceinline	__vane_forceinline
-#	endif
-#	define __vane_novtable
-#elif	defined(_MSC_VER)
-#	define __vane_forceinline	inline	__forceinline
-#	define __vane_noinline		__declspec(noinline)
-#	define __vane_novtable		__declspec(novtable)
+#ifdef  __GNUC__
+#   define __vane_forceinline   inline  __attribute__((__always_inline__))
+#   define __vane_noinline              __attribute__ ((__noinline__))
+#   ifndef  __forceinline
+#       define __forceinline    __vane_forceinline
+#   endif
+#   define __vane_novtable
+#elif   defined(_MSC_VER)
+#   define __vane_forceinline   inline  __forceinline
+#   define __vane_noinline      __declspec(noinline)
+#   define __vane_novtable      __declspec(novtable)
 #endif
 
 
@@ -1501,48 +1501,48 @@ template<typename __T, unsigned __I=1>
 class gstack_allocator
 {
 public:
-	using size_type			= size_t;
-	using difference_type	= ptrdiff_t;
-	using pointer			= __T*;
-	using const_pointer		= const __T*;
-	using reference			= __T&;
-	using const_reference	= const __T&;
-	using value_type		= __T;
+    using size_type         = size_t;
+    using difference_type   = ptrdiff_t;
+    using pointer           = __T*;
+    using const_pointer     = const __T*;
+    using reference         = __T&;
+    using const_reference   = const __T&;
+    using value_type        = __T;
 
-	template<typename __T1>
-	struct rebind {
-		using other = gstack_allocator<__T1,__I>; 
-	};
-
-
-	gstack_allocator() noexcept : gstack_allocator(stacked_allocator<__I>::get_instance()) { }
-	gstack_allocator(gstack<__I> &gs) noexcept : gstack_allocator(gs.get_allocator()) { }
-	gstack_allocator(stacked_allocator<__I> &sa) noexcept : _allocator(&sa) {
-		assert(_allocator);
-	}
-	template<typename __T1>
-	gstack_allocator(const gstack_allocator<__T1,__I> &ga) noexcept : gstack_allocator(ga.get_allocator()) { }
+    template<typename __T1>
+    struct rebind {
+        using other = gstack_allocator<__T1,__I>; 
+    };
 
 
-	~gstack_allocator() noexcept { }
+    gstack_allocator() noexcept : gstack_allocator(stacked_allocator<__I>::get_instance()) { }
+    gstack_allocator(gstack<__I> &gs) noexcept : gstack_allocator(gs.get_allocator()) { }
+    gstack_allocator(stacked_allocator<__I> &sa) noexcept : _allocator(&sa) {
+        assert(_allocator);
+    }
+    template<typename __T1>
+    gstack_allocator(const gstack_allocator<__T1,__I> &ga) noexcept : gstack_allocator(ga.get_allocator()) { }
+
+
+    ~gstack_allocator() noexcept { }
 
 
 
-	__T *allocate(size_t n, const void *p= 0)
-	{
-		(void)p;
-		return static_cast<__T*>(get_allocator().allocate(n * sizeof(__T)));
-	}
+    __T *allocate(size_t n, const void *p= 0)
+    {
+        (void)p;
+        return static_cast<__T*>(get_allocator().allocate(n * sizeof(__T)));
+    }
 
-	void deallocate(__T *, size_t) noexcept { }
+    void deallocate(__T *, size_t) noexcept { }
 
 
-	auto &get_allocator() const noexcept {
-		return *_allocator;
-	}
+    auto &get_allocator() const noexcept {
+        return *_allocator;
+    }
 
 protected:
-	stacked_allocator<__I>	 *_allocator;
+    stacked_allocator<__I>   *_allocator;
 
 }; //gstack_allocator
 
@@ -1565,141 +1565,141 @@ bool operator!=(const gstack_allocator<__T,__I>&, const gstack_allocator<__T,__I
 template<typename __T, long __SIZE=-1, size_t __GSI=1>
 struct gs_array
 {
-	static_assert( __SIZE >= 0, "");
+    static_assert( __SIZE >= 0, "");
 
-	using value_type			 = __T;
-	using pointer				 = __T*;
-	using const_pointer			 = const __T*;
-	using reference				 = __T&;
-	using const_reference		 = const __T&;
-	using iterator   			 = pointer;
-	using const_iterator  		 = const_pointer;
-	using reverse_iterator		 = std::reverse_iterator<iterator>;
-	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+    using value_type             = __T;
+    using pointer                = __T*;
+    using const_pointer          = const __T*;
+    using reference              = __T&;
+    using const_reference        = const __T&;
+    using iterator               = pointer;
+    using const_iterator         = const_pointer;
+    using reverse_iterator       = std::reverse_iterator<iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-	using size_type			= size_t;
-	using difference_type	= ptrdiff_t;
-
-
-	gs_array(const gs_array&) = delete;
-	gs_array &operator=(const gs_array&) = delete;
-	gs_array(gs_array &&a) = default;
-	gs_array &operator=(gs_array&&) = default;
+    using size_type         = size_t;
+    using difference_type   = ptrdiff_t;
 
 
-	gs_array()
-		: _data( stacked_allocator<__GSI>::get_instance().template alloc<__T[]>(size()) )
-	{ }
-	template<typename...Args>
-	gs_array(Args&&...args)
-		: _data( stacked_allocator<__GSI>::get_instance().template alloc<__T[]>(size(), std::forward<Args>(args)...) )
-	{ }
-
-	gs_array(gstack_allocator<__T,__GSI> gsa)
-		: _data( gsa.get_allocator().template alloc<__T[]>(size()) )
-	{ }
-
-	template<typename...Args>
-	gs_array(gstack_allocator<__T,__GSI> gsa, Args&&...args)
-		: _data( gsa.get_allocator().template alloc<__T[]>(size(), std::forward<Args>(args)...) )
-	{ }
-
-	gs_array(gstack<__GSI> &gs)
-		: _data( gs.get_allocator().template alloc<__T[]>(size()) )
-	{ }
-	template<typename...Args>
-	gs_array(gstack<__GSI> &gs, Args&&...args)
-		: _data( gs.get_allocator().template alloc<__T[]>(size(), std::forward<Args>(args)...) )
-	{ }
+    gs_array(const gs_array&) = delete;
+    gs_array &operator=(const gs_array&) = delete;
+    gs_array(gs_array &&a) = default;
+    gs_array &operator=(gs_array&&) = default;
 
 
+    gs_array()
+        : _data( stacked_allocator<__GSI>::get_instance().template alloc<__T[]>(size()) )
+    { }
+    template<typename...Args>
+    gs_array(Args&&...args)
+        : _data( stacked_allocator<__GSI>::get_instance().template alloc<__T[]>(size(), std::forward<Args>(args)...) )
+    { }
 
-	reference
-	operator[](size_type i) {
-		return __SIZE ? _data[i] : *(value_type*)nullptr;
-	}
+    gs_array(gstack_allocator<__T,__GSI> gsa)
+        : _data( gsa.get_allocator().template alloc<__T[]>(size()) )
+    { }
 
-	const_reference
-	operator[](size_type i) const {
-		return __SIZE ? _data[i] : *(value_type*)nullptr;
-	}
+    template<typename...Args>
+    gs_array(gstack_allocator<__T,__GSI> gsa, Args&&...args)
+        : _data( gsa.get_allocator().template alloc<__T[]>(size(), std::forward<Args>(args)...) )
+    { }
 
-	pointer
-	data() {
-		return __SIZE ? _data.get() : nullptr;
-	}
-
-	const_pointer
-	data() const {
-		return _data.get();
-	}
-
-	reference
-	front() {
-		return __SIZE ? _data[0] : *(value_type*)nullptr;
-	}
-	const_reference
-	front() const {
-		return __SIZE ? _data[0] : *(value_type*)nullptr;
-	}
-
-	reference
-	back() {
-		return __SIZE ? _data[__SIZE-1] : *(value_type*)nullptr;
-	}
-	const_reference
-	back() const {
-		return __SIZE ? _data[__SIZE-1] : *(value_type*)nullptr;
-	}
-
-	constexpr bool		empty() noexcept	{ return __SIZE==0; }
-	constexpr size_type	size()  noexcept	{ return __SIZE;    }
-
-	iterator begin() noexcept	{ return iterator(data()); }
-	iterator end()   noexcept	{ return iterator(data() + __SIZE); }
-
-	reverse_iterator rbegin() noexcept		{ return reverse_iterator(end()); }
-	reverse_iterator rend()   noexcept		{ return reverse_iterator(begin()); }
-
-	const_iterator begin() const noexcept	{ return const_iterator(data()); }
-	const_iterator end()   const noexcept	{ return const_iterator(data() + __SIZE); }
-
-	const_iterator cbegin() const noexcept	{ return const_iterator(data()); }
-	const_iterator cend()   const noexcept	{ return const_iterator(data() + __SIZE); }
-
-	const_reverse_iterator rbegin() const noexcept	{ return const_reverse_iterator(end()); }
-	const_reverse_iterator rend()   const noexcept	{ return const_reverse_iterator(begin()); }
-
-	const_reverse_iterator crbegin() const noexcept	{ return const_reverse_iterator(end()); }
-	const_reverse_iterator crend()   const noexcept	{ return const_reverse_iterator(begin()); }
+    gs_array(gstack<__GSI> &gs)
+        : _data( gs.get_allocator().template alloc<__T[]>(size()) )
+    { }
+    template<typename...Args>
+    gs_array(gstack<__GSI> &gs, Args&&...args)
+        : _data( gs.get_allocator().template alloc<__T[]>(size(), std::forward<Args>(args)...) )
+    { }
 
 
-	void fill(const value_type &v) {
-		std::fill_n(begin(), size(), v);
-	}
+
+    reference
+    operator[](size_type i) {
+        return __SIZE ? _data[i] : *(value_type*)nullptr;
+    }
+
+    const_reference
+    operator[](size_type i) const {
+        return __SIZE ? _data[i] : *(value_type*)nullptr;
+    }
+
+    pointer
+    data() {
+        return __SIZE ? _data.get() : nullptr;
+    }
+
+    const_pointer
+    data() const {
+        return _data.get();
+    }
+
+    reference
+    front() {
+        return __SIZE ? _data[0] : *(value_type*)nullptr;
+    }
+    const_reference
+    front() const {
+        return __SIZE ? _data[0] : *(value_type*)nullptr;
+    }
+
+    reference
+    back() {
+        return __SIZE ? _data[__SIZE-1] : *(value_type*)nullptr;
+    }
+    const_reference
+    back() const {
+        return __SIZE ? _data[__SIZE-1] : *(value_type*)nullptr;
+    }
+
+    constexpr bool      empty() noexcept    { return __SIZE==0; }
+    constexpr size_type size()  noexcept    { return __SIZE;    }
+
+    iterator begin() noexcept   { return iterator(data()); }
+    iterator end()   noexcept   { return iterator(data() + __SIZE); }
+
+    reverse_iterator rbegin() noexcept      { return reverse_iterator(end()); }
+    reverse_iterator rend()   noexcept      { return reverse_iterator(begin()); }
+
+    const_iterator begin() const noexcept   { return const_iterator(data()); }
+    const_iterator end()   const noexcept   { return const_iterator(data() + __SIZE); }
+
+    const_iterator cbegin() const noexcept  { return const_iterator(data()); }
+    const_iterator cend()   const noexcept  { return const_iterator(data() + __SIZE); }
+
+    const_reverse_iterator rbegin() const noexcept  { return const_reverse_iterator(end()); }
+    const_reverse_iterator rend()   const noexcept  { return const_reverse_iterator(begin()); }
+
+    const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(end()); }
+    const_reverse_iterator crend()   const noexcept { return const_reverse_iterator(begin()); }
 
 
-	operator std::array<__T,__SIZE>&() {
-		return *(std::array<__T,__SIZE>*)data();
-	}
+    void fill(const value_type &v) {
+        std::fill_n(begin(), size(), v);
+    }
 
-	std::array<__T,__SIZE>  &as_array() const {
-		return *reinterpret_cast<std::array<__T,__SIZE>*>(data());
-	}
+
+    operator std::array<__T,__SIZE>&() {
+        return *(std::array<__T,__SIZE>*)data();
+    }
+
+    std::array<__T,__SIZE>  &as_array() const {
+        return *reinterpret_cast<std::array<__T,__SIZE>*>(data());
+    }
 
 
 private:
-	static auto fff() {
-		gstack<>	gs;
-		return gs.alloc<__T[]>(1);
-	}
-	using data_ptr = decltype(fff());
+    static auto fff() {
+        gstack<>    gs;
+        return gs.alloc<__T[]>(1);
+    }
+    using data_ptr = decltype(fff());
 
 protected:
-	data_ptr	_data;
+    data_ptr    _data;
 
 
-	friend struct gs_array<__T,-1,__GSI>;
+    friend struct gs_array<__T,-1,__GSI>;
 };
 
 
@@ -1716,7 +1716,7 @@ operator!=(const gs_array<__T, __SIZE> &a, const gs_array<__T, __SIZE> &b)
 template<typename __T, size_t __SIZE>
 inline bool
 operator<(const gs_array<__T, __SIZE> &a, const gs_array<__T, __SIZE> &b) { 
-	return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end()); 
+    return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end()); 
 }
 
 template<typename __T, size_t __SIZE>
@@ -1739,147 +1739,147 @@ operator>=(const gs_array<__T, __SIZE> &a, const gs_array<__T, __SIZE> &b)
 template<typename __T, size_t __GSI>
 struct gs_array<__T,-1,__GSI>
 {
-	using value_type			 = __T;
-	using pointer				 = __T*;
-	using const_pointer			 = const __T*;
-	using reference				 = __T&;
-	using const_reference		 = const __T&;
-	using iterator   			 = pointer;
-	using const_iterator  		 = const_pointer;
-	using reverse_iterator		 = std::reverse_iterator<iterator>;
-	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+    using value_type             = __T;
+    using pointer                = __T*;
+    using const_pointer          = const __T*;
+    using reference              = __T&;
+    using const_reference        = const __T&;
+    using iterator               = pointer;
+    using const_iterator         = const_pointer;
+    using reverse_iterator       = std::reverse_iterator<iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-	using size_type			= unsigned;
-	using difference_type	= ptrdiff_t;
-
-
-	gs_array(const gs_array&) = delete;
-	gs_array &operator=(const gs_array&) = delete;
-
-	template<long _SIZE>
-	gs_array(gs_array<__T,_SIZE,__GSI> &&a) {
-		//_size = 0;
-		_data = std::move(a._data);
-		_size = _SIZE<0 ? a._size : _SIZE;
-	}
-	template<long _SIZE>
-	gs_array &operator=(gs_array<__T,_SIZE,__GSI> &&a) {
-		//_size = 0;
-		_data = std::move(a._data);
-		_size = _SIZE<0 ? a._size : _SIZE;
-		return *this;
-	}
+    using size_type         = unsigned;
+    using difference_type   = ptrdiff_t;
 
 
-	gs_array() {
-		_size = 0;
-	}
+    gs_array(const gs_array&) = delete;
+    gs_array &operator=(const gs_array&) = delete;
 
-	gs_array(unsigned size) {
-		assert( size );
-		_data = stacked_allocator<__GSI>::get_instance().template alloc<__T[]>(size);
-		_size = size;
-	}
-
-	template<typename...Args>
-	gs_array(unsigned size, Args&&...args) : _size(0) {
-		assert( size );
-		_data = stacked_allocator<__GSI>::get_instance().template alloc<__T[]>(size, std::forward<Args>(args)...);
-		_size = size;
-	}
-	gs_array(unsigned size, gstack_allocator<__T,__GSI> &gsa) {
-		assert( size );
-		_data = gsa.get_allocator().template alloc<__T[]>(size);
-		_size = size;
-	}
-
-	gs_array(gstack_allocator<__T,__GSI> &gsa, unsigned size) {
-		assert( size );
-		_data = gsa.get_allocator().template alloc<__T[]>(size);
-		_size = size;
-	}
-	template<typename...Args>
-	gs_array(gstack_allocator<__T,__GSI> &gsa, unsigned size, Args&&...args) : _size(0) {
-		assert( size );
-		_data = gsa.get_allocator().template alloc<__T[]>(size, std::forward<Args>(args)...);
-		_size = size;
-	}
-
-	gs_array(unsigned size, gstack<__GSI> &gs) {
-		assert( size );
-		_data = gs.get_allocator().template alloc<__T[]>(size);
-		_size = size;
-	}
-
-	gs_array(gstack<__GSI> &gs, unsigned size) {
-		assert( size );
-		_data = gs.get_allocator().template alloc<__T[]>(size);
-		_size = size;
-	}
-	template<typename...Args>
-	gs_array(gstack<__GSI> &gs, unsigned size, Args&&...args) : _size(0) {
-		assert( size );
-		_data = gs.get_allocator().template alloc<__T[]>(size, std::forward<Args>(args)...);
-		_size = size;
-	}
+    template<long _SIZE>
+    gs_array(gs_array<__T,_SIZE,__GSI> &&a) {
+        //_size = 0;
+        _data = std::move(a._data);
+        _size = _SIZE<0 ? a._size : _SIZE;
+    }
+    template<long _SIZE>
+    gs_array &operator=(gs_array<__T,_SIZE,__GSI> &&a) {
+        //_size = 0;
+        _data = std::move(a._data);
+        _size = _SIZE<0 ? a._size : _SIZE;
+        return *this;
+    }
 
 
-	__T& operator[](size_type i)				{ return _data[i]; }
-	const __T& operator[](size_type i) const	{ return _data[i]; }
+    gs_array() {
+        _size = 0;
+    }
+
+    gs_array(unsigned size) {
+        assert( size );
+        _data = stacked_allocator<__GSI>::get_instance().template alloc<__T[]>(size);
+        _size = size;
+    }
+
+    template<typename...Args>
+    gs_array(unsigned size, Args&&...args) : _size(0) {
+        assert( size );
+        _data = stacked_allocator<__GSI>::get_instance().template alloc<__T[]>(size, std::forward<Args>(args)...);
+        _size = size;
+    }
+    gs_array(unsigned size, gstack_allocator<__T,__GSI> &gsa) {
+        assert( size );
+        _data = gsa.get_allocator().template alloc<__T[]>(size);
+        _size = size;
+    }
+
+    gs_array(gstack_allocator<__T,__GSI> &gsa, unsigned size) {
+        assert( size );
+        _data = gsa.get_allocator().template alloc<__T[]>(size);
+        _size = size;
+    }
+    template<typename...Args>
+    gs_array(gstack_allocator<__T,__GSI> &gsa, unsigned size, Args&&...args) : _size(0) {
+        assert( size );
+        _data = gsa.get_allocator().template alloc<__T[]>(size, std::forward<Args>(args)...);
+        _size = size;
+    }
+
+    gs_array(unsigned size, gstack<__GSI> &gs) {
+        assert( size );
+        _data = gs.get_allocator().template alloc<__T[]>(size);
+        _size = size;
+    }
+
+    gs_array(gstack<__GSI> &gs, unsigned size) {
+        assert( size );
+        _data = gs.get_allocator().template alloc<__T[]>(size);
+        _size = size;
+    }
+    template<typename...Args>
+    gs_array(gstack<__GSI> &gs, unsigned size, Args&&...args) : _size(0) {
+        assert( size );
+        _data = gs.get_allocator().template alloc<__T[]>(size, std::forward<Args>(args)...);
+        _size = size;
+    }
 
 
-	__T *data()				{ return _data.get(); }
-	const __T *data() const	{ return _data.get(); }
-
-	__T &front()				{ return _data[0]; }
-	const __T &front() const	{ return _data[0]; }
-
-	__T &back()				{ return _data[_size-1]; }
-	const __T &back() const	{ return _data[_size-1]; }
+    __T& operator[](size_type i)                { return _data[i]; }
+    const __T& operator[](size_type i) const    { return _data[i]; }
 
 
-	bool		empty() noexcept	{ return _size==0; }
-	size_type	size()  noexcept	{ return _size;    }
+    __T *data()             { return _data.get(); }
+    const __T *data() const { return _data.get(); }
 
-	iterator begin() noexcept	{ return iterator(data()); }
-	iterator end()   noexcept	{ return iterator(data() + _size); }
+    __T &front()                { return _data[0]; }
+    const __T &front() const    { return _data[0]; }
 
-	reverse_iterator rbegin() noexcept		{ return reverse_iterator(end()); }
-	reverse_iterator rend()   noexcept		{ return reverse_iterator(begin()); }
-
-	const_iterator begin() const noexcept	{ return const_iterator(data()); }
-	const_iterator end()   const noexcept	{ return const_iterator(data() + _size); }
-
-	const_iterator cbegin() const noexcept	{ return const_iterator(data()); }
-	const_iterator cend()   const noexcept	{ return const_iterator(data() + _size); }
-
-	const_reverse_iterator rbegin() const noexcept	{ return const_reverse_iterator(end()); }
-	const_reverse_iterator rend()   const noexcept	{ return const_reverse_iterator(begin()); }
-
-	const_reverse_iterator crbegin() const noexcept	{ return const_reverse_iterator(end()); }
-	const_reverse_iterator crend()   const noexcept	{ return const_reverse_iterator(begin()); }
+    __T &back()             { return _data[_size-1]; }
+    const __T &back() const { return _data[_size-1]; }
 
 
-	void fill(const value_type &v) {
-		std::fill_n(begin(), size(), v);
-	}
+    bool        empty() noexcept    { return _size==0; }
+    size_type   size()  noexcept    { return _size;    }
+
+    iterator begin() noexcept   { return iterator(data()); }
+    iterator end()   noexcept   { return iterator(data() + _size); }
+
+    reverse_iterator rbegin() noexcept      { return reverse_iterator(end()); }
+    reverse_iterator rend()   noexcept      { return reverse_iterator(begin()); }
+
+    const_iterator begin() const noexcept   { return const_iterator(data()); }
+    const_iterator end()   const noexcept   { return const_iterator(data() + _size); }
+
+    const_iterator cbegin() const noexcept  { return const_iterator(data()); }
+    const_iterator cend()   const noexcept  { return const_iterator(data() + _size); }
+
+    const_reverse_iterator rbegin() const noexcept  { return const_reverse_iterator(end()); }
+    const_reverse_iterator rend()   const noexcept  { return const_reverse_iterator(begin()); }
+
+    const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(end()); }
+    const_reverse_iterator crend()   const noexcept { return const_reverse_iterator(begin()); }
+
+
+    void fill(const value_type &v) {
+        std::fill_n(begin(), size(), v);
+    }
 
 
 
 private:
-	static auto fff() {		//for MSC
-		gstack<>	gs;
-		gs.alloc<__T[]>(1);
-		return gs.alloc<__T[]>(1);
-	}
-	using data_ptr = decltype(fff());
+    static auto fff() {     //for MSC
+        gstack<>    gs;
+        gs.alloc<__T[]>(1);
+        return gs.alloc<__T[]>(1);
+    }
+    using data_ptr = decltype(fff());
 
 protected:
-	data_ptr	_data;
+    data_ptr    _data;
 
 
 
-	unsigned	_size;
+    unsigned    _size;
 };
 
 
@@ -1888,10 +1888,10 @@ protected:
 template<typename __T=char, unsigned __GSI=1, typename __Traits=std::char_traits<__T>>
 using basic_gs_string = std::basic_string<__T, __Traits, gstack_allocator<__T,__GSI>>;
 
-template<unsigned __GSI=1>	using gs_string    = basic_gs_string<char>;
-template<unsigned __GSI=1>	using gs_wstring   = basic_gs_string<wchar_t>;
-template<unsigned __GSI=1>	using gs_u16string = basic_gs_string<char16_t>;
-template<unsigned __GSI=1>	using gs_u32string = basic_gs_string<char32_t>;
+template<unsigned __GSI=1>  using gs_string    = basic_gs_string<char>;
+template<unsigned __GSI=1>  using gs_wstring   = basic_gs_string<wchar_t>;
+template<unsigned __GSI=1>  using gs_u16string = basic_gs_string<char16_t>;
+template<unsigned __GSI=1>  using gs_u32string = basic_gs_string<char32_t>;
 
 
 
@@ -5754,33 +5754,33 @@ using multi_func  = vane_detail::multi_func_TM_i<FX,MI,Map,Ts...>;
 
 
 namespace std {/////////////////////////////////////////////////////////////////
-	template<size_t I, typename T, size_t SIZE>
-	inline
-	T &get(vane::gs_array<T,SIZE> &a) {
-		static_assert(I < SIZE, "index is out of bounds");
-		return a[I];
-	}
+    template<size_t I, typename T, size_t SIZE>
+    inline
+    T &get(vane::gs_array<T,SIZE> &a) {
+        static_assert(I < SIZE, "index is out of bounds");
+        return a[I];
+    }
 
-	template<typename T, size_t SIZE>
-	struct tuple_size<vane::gs_array<T,SIZE>>
-	: public integral_constant<size_t, SIZE> { };
+    template<typename T, size_t SIZE>
+    struct tuple_size<vane::gs_array<T,SIZE>>
+    : public integral_constant<size_t, SIZE> { };
 
 
-	template<size_t I, typename T, size_t N>
-	struct tuple_element<I, vane::gs_array<T,N> > {
-		using type = T;
-	};
+    template<size_t I, typename T, size_t N>
+    struct tuple_element<I, vane::gs_array<T,N> > {
+        using type = T;
+    };
 
-	template<typename __T, unsigned __GSI, typename __Traits>
-	struct hash<vane::basic_gs_string<__T,__GSI,__Traits>> : __hash_base<size_t, vane::basic_gs_string<__T,__GSI,__Traits>>
-	{
-		size_t
-		operator()(const vane::basic_gs_string<__T,__GSI,__Traits> &__s) const noexcept
-		{ return std::_Hash_impl::hash(__s.data(), __s.length()); }
-	};
+    template<typename __T, unsigned __GSI, typename __Traits>
+    struct hash<vane::basic_gs_string<__T,__GSI,__Traits>> : __hash_base<size_t, vane::basic_gs_string<__T,__GSI,__Traits>>
+    {
+        size_t
+        operator()(const vane::basic_gs_string<__T,__GSI,__Traits> &__s) const noexcept
+        { return std::_Hash_impl::hash(__s.data(), __s.length()); }
+    };
 
-	template<typename __T, unsigned __GSI, typename __Traits>
-	struct __is_fast_hash<hash<vane::basic_gs_string<__T,__GSI,__Traits>>> : std::false_type { };
+    template<typename __T, unsigned __GSI, typename __Traits>
+    struct __is_fast_hash<hash<vane::basic_gs_string<__T,__GSI,__Traits>>> : std::false_type { };
 
 }//end-namespace std////////////////////////////////////////////////////////////
 
@@ -5790,191 +5790,191 @@ namespace std {/////////////////////////////////////////////////////////////////
 
 // vane_duck_INTERFACE ////////////////////////////////////////////////
 /*
-	For macro meta-programming, I used the library:
-		`Cloak' - "A mini-preprocessor library to demonstrate the recursive capabilities of the preprocessor"
-	It's a small (128 lines) libray, and not appropriate to be used as it is, so I modified it.
-	I appreciate his work.
-	You can get it at:
-		https://github.com/pfultz2/Cloak/blob/master/cloak.h
+    For macro meta-programming, I used the library:
+        `Cloak' - "A mini-preprocessor library to demonstrate the recursive capabilities of the preprocessor"
+    It's a small (128 lines) libray, and not appropriate to be used as it is, so I modified it.
+    I appreciate his work.
+    You can get it at:
+        https://github.com/pfultz2/Cloak/blob/master/cloak.h
 */
 
-#define	VANE_PP_VA_ARG_0(_0,...) _0
-#define	VANE_PP_VA_ARG_1(_0,_1,...) _1
-#define	VANE_PP_VA_ARG_2(_0,_1,_2,...) _2
-#define	VANE_PP_VA_ARG_3(_0,_1,_2,_3,...) _3
-#define	VANE_PP_VA_ARG_4(_0,_1,_2,_3,_4,...) _4
-#define	VANE_PP_VA_ARG_5(_0,_1,_2,_3,_4,_5,...) _5
-#define	VANE_PP_VA_ARG_6(_0,_1,_2,_3,_4,_5,_6,...) _6
-#define	VANE_PP_VA_ARG_7(_0,_1,_2,_3,_4,_5,_6,_7,...) _7
-#define	VANE_PP_VA_ARG_8(_0,_1,_2,_3,_4,_5,_6,_7,_8,...) _8
-#define	VANE_PP_VA_ARG_9(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,...) _9
-#define	VANE_PP_VA_ARG_10(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,...) _10
-#define	VANE_PP_VA_ARG_11(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,...) _11
-#define	VANE_PP_VA_ARG_12(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,...) _12
-#define	VANE_PP_VA_ARG_13(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,...) _13
-#define	VANE_PP_VA_ARG_14(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,...) _14
-#define	VANE_PP_VA_ARG_15(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,...) _15
-#define	VANE_PP_VA_ARG_16(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,...) _16
-#define	VANE_PP_VA_ARG_17(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,...) _17
-#define	VANE_PP_VA_ARG_18(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,...) _18
-#define	VANE_PP_VA_ARG_19(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,...) _19
-#define	VANE_PP_VA_ARG_20(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,...) _20
-#define	VANE_PP_VA_ARG_21(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,...) _21
-#define	VANE_PP_VA_ARG_22(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,...) _22
-#define	VANE_PP_VA_ARG_23(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,...) _23
-#define	VANE_PP_VA_ARG_24(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,...) _24
-#define	VANE_PP_VA_ARG_25(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,...) _25
-#define	VANE_PP_VA_ARG_26(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,...) _26
-#define	VANE_PP_VA_ARG_27(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,...) _27
-#define	VANE_PP_VA_ARG_28(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,...) _28
-#define	VANE_PP_VA_ARG_29(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,...) _29
-#define	VANE_PP_VA_ARG_30(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,...) _30
-#define	VANE_PP_VA_ARG_31(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,...) _31
-#define	VANE_PP_VA_ARG_32(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,...) _32
-#define	VANE_PP_VA_ARG_33(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,...) _33
-#define	VANE_PP_VA_ARG_34(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,...) _34
-#define	VANE_PP_VA_ARG_35(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,...) _35
-#define	VANE_PP_VA_ARG_36(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,...) _36
-#define	VANE_PP_VA_ARG_37(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,...) _37
-#define	VANE_PP_VA_ARG_38(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,...) _38
-#define	VANE_PP_VA_ARG_39(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,...) _39
-#define	VANE_PP_VA_ARG_40(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,...) _40
-#define	VANE_PP_VA_ARG_41(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,...) _41
-#define	VANE_PP_VA_ARG_42(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,...) _42
-#define	VANE_PP_VA_ARG_43(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,...) _43
-#define	VANE_PP_VA_ARG_44(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,...) _44
-#define	VANE_PP_VA_ARG_45(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,...) _45
-#define	VANE_PP_VA_ARG_46(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,...) _46
-#define	VANE_PP_VA_ARG_47(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,...) _47
-#define	VANE_PP_VA_ARG_48(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,...) _48
-#define	VANE_PP_VA_ARG_49(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,...) _49
-#define	VANE_PP_VA_ARG_50(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,...) _50
-#define	VANE_PP_VA_ARG_51(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,...) _51
-#define	VANE_PP_VA_ARG_52(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,...) _52
-#define	VANE_PP_VA_ARG_53(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,...) _53
-#define	VANE_PP_VA_ARG_54(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,...) _54
-#define	VANE_PP_VA_ARG_55(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,...) _55
-#define	VANE_PP_VA_ARG_56(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,...) _56
-#define	VANE_PP_VA_ARG_57(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,...) _57
-#define	VANE_PP_VA_ARG_58(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,_58,...) _58
-#define	VANE_PP_VA_ARG_59(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,_58,_59,...) _59
-#define	VANE_PP_VA_ARG_60(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,_58,_59,_60,...) _60
-#define	VANE_PP_VA_ARG_61(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,_58,_59,_60,_61,...) _61
-#define	VANE_PP_VA_ARG_62(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,_58,_59,_60,_61,_62,...) _62
-#define	VANE_PP_VA_ARG_63(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,_58,_59,_60,_61,_62,_63,...) _63
-#define	VANE_PP_VA_ARG_64(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,_58,_59,_60,_61,_62,_63,_64,...) _64
-#define VANE_PP_VA_ARG_MAX	VANE_PP_VA_ARG_64
+#define VANE_PP_VA_ARG_0(_0,...) _0
+#define VANE_PP_VA_ARG_1(_0,_1,...) _1
+#define VANE_PP_VA_ARG_2(_0,_1,_2,...) _2
+#define VANE_PP_VA_ARG_3(_0,_1,_2,_3,...) _3
+#define VANE_PP_VA_ARG_4(_0,_1,_2,_3,_4,...) _4
+#define VANE_PP_VA_ARG_5(_0,_1,_2,_3,_4,_5,...) _5
+#define VANE_PP_VA_ARG_6(_0,_1,_2,_3,_4,_5,_6,...) _6
+#define VANE_PP_VA_ARG_7(_0,_1,_2,_3,_4,_5,_6,_7,...) _7
+#define VANE_PP_VA_ARG_8(_0,_1,_2,_3,_4,_5,_6,_7,_8,...) _8
+#define VANE_PP_VA_ARG_9(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,...) _9
+#define VANE_PP_VA_ARG_10(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,...) _10
+#define VANE_PP_VA_ARG_11(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,...) _11
+#define VANE_PP_VA_ARG_12(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,...) _12
+#define VANE_PP_VA_ARG_13(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,...) _13
+#define VANE_PP_VA_ARG_14(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,...) _14
+#define VANE_PP_VA_ARG_15(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,...) _15
+#define VANE_PP_VA_ARG_16(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,...) _16
+#define VANE_PP_VA_ARG_17(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,...) _17
+#define VANE_PP_VA_ARG_18(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,...) _18
+#define VANE_PP_VA_ARG_19(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,...) _19
+#define VANE_PP_VA_ARG_20(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,...) _20
+#define VANE_PP_VA_ARG_21(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,...) _21
+#define VANE_PP_VA_ARG_22(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,...) _22
+#define VANE_PP_VA_ARG_23(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,...) _23
+#define VANE_PP_VA_ARG_24(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,...) _24
+#define VANE_PP_VA_ARG_25(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,...) _25
+#define VANE_PP_VA_ARG_26(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,...) _26
+#define VANE_PP_VA_ARG_27(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,...) _27
+#define VANE_PP_VA_ARG_28(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,...) _28
+#define VANE_PP_VA_ARG_29(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,...) _29
+#define VANE_PP_VA_ARG_30(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,...) _30
+#define VANE_PP_VA_ARG_31(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,...) _31
+#define VANE_PP_VA_ARG_32(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,...) _32
+#define VANE_PP_VA_ARG_33(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,...) _33
+#define VANE_PP_VA_ARG_34(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,...) _34
+#define VANE_PP_VA_ARG_35(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,...) _35
+#define VANE_PP_VA_ARG_36(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,...) _36
+#define VANE_PP_VA_ARG_37(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,...) _37
+#define VANE_PP_VA_ARG_38(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,...) _38
+#define VANE_PP_VA_ARG_39(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,...) _39
+#define VANE_PP_VA_ARG_40(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,...) _40
+#define VANE_PP_VA_ARG_41(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,...) _41
+#define VANE_PP_VA_ARG_42(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,...) _42
+#define VANE_PP_VA_ARG_43(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,...) _43
+#define VANE_PP_VA_ARG_44(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,...) _44
+#define VANE_PP_VA_ARG_45(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,...) _45
+#define VANE_PP_VA_ARG_46(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,...) _46
+#define VANE_PP_VA_ARG_47(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,...) _47
+#define VANE_PP_VA_ARG_48(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,...) _48
+#define VANE_PP_VA_ARG_49(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,...) _49
+#define VANE_PP_VA_ARG_50(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,...) _50
+#define VANE_PP_VA_ARG_51(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,...) _51
+#define VANE_PP_VA_ARG_52(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,...) _52
+#define VANE_PP_VA_ARG_53(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,...) _53
+#define VANE_PP_VA_ARG_54(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,...) _54
+#define VANE_PP_VA_ARG_55(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,...) _55
+#define VANE_PP_VA_ARG_56(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,...) _56
+#define VANE_PP_VA_ARG_57(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,...) _57
+#define VANE_PP_VA_ARG_58(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,_58,...) _58
+#define VANE_PP_VA_ARG_59(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,_58,_59,...) _59
+#define VANE_PP_VA_ARG_60(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,_58,_59,_60,...) _60
+#define VANE_PP_VA_ARG_61(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,_58,_59,_60,_61,...) _61
+#define VANE_PP_VA_ARG_62(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,_58,_59,_60,_61,_62,...) _62
+#define VANE_PP_VA_ARG_63(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,_58,_59,_60,_61,_62,_63,...) _63
+#define VANE_PP_VA_ARG_64(_0,_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,_43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,_58,_59,_60,_61,_62,_63,_64,...) _64
+#define VANE_PP_VA_ARG_MAX  VANE_PP_VA_ARG_64
 
 
-#define VANE_PP_STRINGIZE(...)		VANE_PP_STRINGIZE_1(__VA_ARGS__)
-#define VANE_PP_STRINGIZE_1(...)	VANE_PP_STRINGIZE_2(__VA_ARGS__)
-#define VANE_PP_STRINGIZE_2(...)	#__VA_ARGS__
+#define VANE_PP_STRINGIZE(...)      VANE_PP_STRINGIZE_1(__VA_ARGS__)
+#define VANE_PP_STRINGIZE_1(...)    VANE_PP_STRINGIZE_2(__VA_ARGS__)
+#define VANE_PP_STRINGIZE_2(...)    #__VA_ARGS__
 
 
-#define VANE_PP_EXPAND_(...)	__VA_ARGS__
-#define	VANE_PP_EXPAND_L1_(...)	__VA_ARGS__
-#define	VANE_PP_EXPAND_L2_(...)	__VA_ARGS__
-#define	VANE_PP_EXPAND_L3_(...)	__VA_ARGS__
-#define	VANE_PP_EXPAND_L4_(...)	__VA_ARGS__
+#define VANE_PP_EXPAND_(...)    __VA_ARGS__
+#define VANE_PP_EXPAND_L1_(...) __VA_ARGS__
+#define VANE_PP_EXPAND_L2_(...) __VA_ARGS__
+#define VANE_PP_EXPAND_L3_(...) __VA_ARGS__
+#define VANE_PP_EXPAND_L4_(...) __VA_ARGS__
 
-#define VANE_PP_GLUE(x, y)		x y
-#define VANE_PP_GLUE_(x, y)		x y
-#define VANE_PP_GLUE_L2_(x, y)	x y
-#define VANE_PP_GLUE_L3_(x, y)	x y
-#define VANE_PP_GLUE_L4_(x, y)	x y
+#define VANE_PP_GLUE(x, y)      x y
+#define VANE_PP_GLUE_(x, y)     x y
+#define VANE_PP_GLUE_L2_(x, y)  x y
+#define VANE_PP_GLUE_L3_(x, y)  x y
+#define VANE_PP_GLUE_L4_(x, y)  x y
 
-#define	__VA_COUNT(...)			VANE_PP_GLUE_L4_(VANE_PP_VA_ARG_64,(dummy,##__VA_ARGS__,63,62,61,60,59,58,57,56,55,54,53,52,51,50,49,48,47,46,45,44,43,42,41,40,39,38,37,36,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0))
-#define	VANE_PP_VA_COUNT(...)	__VA_COUNT(__VA_ARGS__)
-#define	VANE_PP_TUPLE_SIZE(tuple)	__VA_COUNT tuple
+#define __VA_COUNT(...)         VANE_PP_GLUE_L4_(VANE_PP_VA_ARG_64,(dummy,##__VA_ARGS__,63,62,61,60,59,58,57,56,55,54,53,52,51,50,49,48,47,46,45,44,43,42,41,40,39,38,37,36,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0))
+#define VANE_PP_VA_COUNT(...)   __VA_COUNT(__VA_ARGS__)
+#define VANE_PP_TUPLE_SIZE(tuple)   __VA_COUNT tuple
 
-#define VANE_PP_TUPLE_ELEM(i,tuple)	VANE_PP_VA_ARG_ ## i tuple
-#define VANE_PP_VA_ARG(i, ...)		VANE_PP_TUPLE_ELEM(i, (__VA_ARGS__))
+#define VANE_PP_TUPLE_ELEM(i,tuple) VANE_PP_VA_ARG_ ## i tuple
+#define VANE_PP_VA_ARG(i, ...)      VANE_PP_TUPLE_ELEM(i, (__VA_ARGS__))
 
-#define	VANE_PP_MK_ARGS_10(x)	x,x,x,x,x,x,x,x,x,x
-#define	VANE_PP_MK_ARGS_20(x)	VANE_PP_MK_ARGS_10(x),VANE_PP_MK_ARGS_10(x)
-#define	VANE_PP_MK_ARGS_60(x)	VANE_PP_MK_ARGS_20(x),VANE_PP_MK_ARGS_20(x),VANE_PP_MK_ARGS_20(x)
+#define VANE_PP_MK_ARGS_10(x)   x,x,x,x,x,x,x,x,x,x
+#define VANE_PP_MK_ARGS_20(x)   VANE_PP_MK_ARGS_10(x),VANE_PP_MK_ARGS_10(x)
+#define VANE_PP_MK_ARGS_60(x)   VANE_PP_MK_ARGS_20(x),VANE_PP_MK_ARGS_20(x),VANE_PP_MK_ARGS_20(x)
 
-#define	VANE_PP_CHECK(...)		VANE_PP_CHECK_1(__VA_ARGS__, VANE_PP_MK_ARGS_60(0))
-#define	VANE_PP_CHECK_1(...)	VANE_PP_CHECK_2((__VA_ARGS__))
-#define	VANE_PP_CHECK_2(a)		VANE_PP_VA_ARG_60 a
+#define VANE_PP_CHECK(...)      VANE_PP_CHECK_1(__VA_ARGS__, VANE_PP_MK_ARGS_60(0))
+#define VANE_PP_CHECK_1(...)    VANE_PP_CHECK_2((__VA_ARGS__))
+#define VANE_PP_CHECK_2(a)      VANE_PP_VA_ARG_60 a
 
-#define	VANE_PP_PROBE(...)		VANE_PP_PROBE_(__VA_ARGS__)		
-#define	VANE_PP_PROBE_(...)		VANE_PP_MK_ARGS_60(1),   __VA_ARGS__
+#define VANE_PP_PROBE(...)      VANE_PP_PROBE_(__VA_ARGS__)     
+#define VANE_PP_PROBE_(...)     VANE_PP_MK_ARGS_60(1),   __VA_ARGS__
 
-#define VANE_PP_IS_EMPTY(...)	VANE_PP_IS_EMPTY_(__VA_ARGS__)
-#define VANE_PP_IS_EMPTY_(...)	VANE_PP_CHECK(VANE_PP_PROBE_EMPTY __VA_ARGS__ (VANE_PP_PROBE)(1))
-#define VANE_PP_PROBE_EMPTY(...)	__VA_ARGS__
-#define VANE_PP_IS_NOT_EMPTY(...)	VANE_PP_NOT( VANE_PP_IS_EMPTY(__VA_ARGS__) )
+#define VANE_PP_IS_EMPTY(...)   VANE_PP_IS_EMPTY_(__VA_ARGS__)
+#define VANE_PP_IS_EMPTY_(...)  VANE_PP_CHECK(VANE_PP_PROBE_EMPTY __VA_ARGS__ (VANE_PP_PROBE)(1))
+#define VANE_PP_PROBE_EMPTY(...)    __VA_ARGS__
+#define VANE_PP_IS_NOT_EMPTY(...)   VANE_PP_NOT( VANE_PP_IS_EMPTY(__VA_ARGS__) )
 
-#define	VANE_PP_IS(x,...)		VANE_PP_IS_(x,__VA_ARGS__)
-#define	VANE_PP_IS_(x,...)		VANE_PP_CHECK(VANE_PP_PROBE_IS_ ## x ## _ ##__VA_ARGS__)
+#define VANE_PP_IS(x,...)       VANE_PP_IS_(x,__VA_ARGS__)
+#define VANE_PP_IS_(x,...)      VANE_PP_CHECK(VANE_PP_PROBE_IS_ ## x ## _ ##__VA_ARGS__)
 
-#define	VANE_PP_IS_ONLY(x,...)		VANE_PP_IS_ONLY_(x,__VA_ARGS__)
-#define	VANE_PP_IS_ONLY_(x,...) \
-	VANE_PP_IIF( VANE_PP_IS_PAREN(__VA_ARGS__) ) ( \
-		0,\
-		VANE_PP_IS_ONLY__1((x,__VA_ARGS__)) \
-	)
-#define	VANE_PP_IS_ONLY__1(tuple)	VANE_PP_IS_ONLY__2 tuple
-#define	VANE_PP_IS_ONLY__2(x,...)	VANE_PP_IS_ONLY__3(VANE_PP_PROBE_IS_ONLY_ ## x ## _ ##__VA_ARGS__ (VANE_PP_PROBE)(1))
-#define	VANE_PP_IS_ONLY__3(...)		VANE_PP_CHECK(__VA_ARGS__)
+#define VANE_PP_IS_ONLY(x,...)      VANE_PP_IS_ONLY_(x,__VA_ARGS__)
+#define VANE_PP_IS_ONLY_(x,...) \
+    VANE_PP_IIF( VANE_PP_IS_PAREN(__VA_ARGS__) ) ( \
+        0,\
+        VANE_PP_IS_ONLY__1((x,__VA_ARGS__)) \
+    )
+#define VANE_PP_IS_ONLY__1(tuple)   VANE_PP_IS_ONLY__2 tuple
+#define VANE_PP_IS_ONLY__2(x,...)   VANE_PP_IS_ONLY__3(VANE_PP_PROBE_IS_ONLY_ ## x ## _ ##__VA_ARGS__ (VANE_PP_PROBE)(1))
+#define VANE_PP_IS_ONLY__3(...)     VANE_PP_CHECK(__VA_ARGS__)
 
-#define VANE_PP_PROBE_IS_ONLY_void_void(...)		__VA_ARGS__
+#define VANE_PP_PROBE_IS_ONLY_void_void(...)        __VA_ARGS__
 
-#define	VANE_PP_IS_QUOTE(...)	VANE_PP_IS(VANE_PP_QUOTE,__VA_ARGS__)
-#define VANE_PP_PROBE_IS_VANE_PP_QUOTE_VANE_PP_QUOTE	VANE_PP_PROBE(1),
-#define	o_vane_quote_							VANE_PP_QUOTE
-#define	o_vane_quote__							VANE_PP_QUOTE
-#define	o_vane_quote___							VANE_PP_QUOTE
-#define	o_vane_quote____						VANE_PP_QUOTE
-#define	o_vane_quote_____						VANE_PP_QUOTE
-#define	o_vane_quote______						VANE_PP_QUOTE
-#define	o_vane_quote_______						VANE_PP_QUOTE
-#define	o_vane_quote________					VANE_PP_QUOTE
-#define	o_vane_quote_________					VANE_PP_QUOTE
-#define	o_vane_quote__________					VANE_PP_QUOTE
-#define	o_vane_quote___________					VANE_PP_QUOTE
-#define	o_vane_quote____________				VANE_PP_QUOTE
-#define	o_vane_quote_____________				VANE_PP_QUOTE
-#define	o_vane_quote______________				VANE_PP_QUOTE
-#define	o_vane_quote_______________				VANE_PP_QUOTE
-#define	o_vane_quote________________			VANE_PP_QUOTE
-#define	o_vane_quote_________________			VANE_PP_QUOTE
-#define	o_vane_quote__________________			VANE_PP_QUOTE
-#define	o_vane_quote___________________			VANE_PP_QUOTE
-#define	o_vane_quote____________________		VANE_PP_QUOTE
-#define	o_vane_quote_____________________		VANE_PP_QUOTE
-#define	o_vane_quote______________________		VANE_PP_QUOTE
-#define	o_vane_quote_______________________		VANE_PP_QUOTE
-#define	o_vane_quote________________________	VANE_PP_QUOTE
-#define	o__vane_quote__							VANE_PP_QUOTE
-#define	VANE_PP_EXPAND_VANE_PP_QUOTE(...)	__VA_ARGS__
-#define	VANE_PP_EXPAND_namespace(...)		__VA_ARGS__
-#define	VANE_PP_EXPAND_using(...)			__VA_ARGS__
+#define VANE_PP_IS_QUOTE(...)   VANE_PP_IS(VANE_PP_QUOTE,__VA_ARGS__)
+#define VANE_PP_PROBE_IS_VANE_PP_QUOTE_VANE_PP_QUOTE    VANE_PP_PROBE(1),
+#define o_vane_quote_                           VANE_PP_QUOTE
+#define o_vane_quote__                          VANE_PP_QUOTE
+#define o_vane_quote___                         VANE_PP_QUOTE
+#define o_vane_quote____                        VANE_PP_QUOTE
+#define o_vane_quote_____                       VANE_PP_QUOTE
+#define o_vane_quote______                      VANE_PP_QUOTE
+#define o_vane_quote_______                     VANE_PP_QUOTE
+#define o_vane_quote________                    VANE_PP_QUOTE
+#define o_vane_quote_________                   VANE_PP_QUOTE
+#define o_vane_quote__________                  VANE_PP_QUOTE
+#define o_vane_quote___________                 VANE_PP_QUOTE
+#define o_vane_quote____________                VANE_PP_QUOTE
+#define o_vane_quote_____________               VANE_PP_QUOTE
+#define o_vane_quote______________              VANE_PP_QUOTE
+#define o_vane_quote_______________             VANE_PP_QUOTE
+#define o_vane_quote________________            VANE_PP_QUOTE
+#define o_vane_quote_________________           VANE_PP_QUOTE
+#define o_vane_quote__________________          VANE_PP_QUOTE
+#define o_vane_quote___________________         VANE_PP_QUOTE
+#define o_vane_quote____________________        VANE_PP_QUOTE
+#define o_vane_quote_____________________       VANE_PP_QUOTE
+#define o_vane_quote______________________      VANE_PP_QUOTE
+#define o_vane_quote_______________________     VANE_PP_QUOTE
+#define o_vane_quote________________________    VANE_PP_QUOTE
+#define o__vane_quote__                         VANE_PP_QUOTE
+#define VANE_PP_EXPAND_VANE_PP_QUOTE(...)   __VA_ARGS__
+#define VANE_PP_EXPAND_namespace(...)       __VA_ARGS__
+#define VANE_PP_EXPAND_using(...)           __VA_ARGS__
 
-#define	VANE_PP_IS_NAMESPACE(...)	VANE_PP_IS(namespace,__VA_ARGS__)
-#define VANE_PP_PROBE_IS_namespace_namespace	VANE_PP_PROBE(1),
+#define VANE_PP_IS_NAMESPACE(...)   VANE_PP_IS(namespace,__VA_ARGS__)
+#define VANE_PP_PROBE_IS_namespace_namespace    VANE_PP_PROBE(1),
 
-#define	VANE_PP_IS_USING(...)		VANE_PP_IS(using,__VA_ARGS__)
-#define VANE_PP_PROBE_IS_using_using	VANE_PP_PROBE(1),
+#define VANE_PP_IS_USING(...)       VANE_PP_IS(using,__VA_ARGS__)
+#define VANE_PP_PROBE_IS_using_using    VANE_PP_PROBE(1),
 
-#define VANE_PP_CAT(a, ...)			VANE_PP_CAT_1__(a, __VA_ARGS__)
-#define VANE_PP_CAT_1__(a, ...)		VANE_PP_CAT_2__(a, __VA_ARGS__)
-#define VANE_PP_CAT_2__(a, ...)		a ## __VA_ARGS__
+#define VANE_PP_CAT(a, ...)         VANE_PP_CAT_1__(a, __VA_ARGS__)
+#define VANE_PP_CAT_1__(a, ...)     VANE_PP_CAT_2__(a, __VA_ARGS__)
+#define VANE_PP_CAT_2__(a, ...)     a ## __VA_ARGS__
 
-#define VANE_PP_CAT_(a, ...)		VANE_PP_CAT__1__(a, __VA_ARGS__)
-#define VANE_PP_CAT__1__(a, ...)	VANE_PP_CAT__2__(a, __VA_ARGS__)
-#define VANE_PP_CAT__2__(a, ...)	a ## __VA_ARGS__
+#define VANE_PP_CAT_(a, ...)        VANE_PP_CAT__1__(a, __VA_ARGS__)
+#define VANE_PP_CAT__1__(a, ...)    VANE_PP_CAT__2__(a, __VA_ARGS__)
+#define VANE_PP_CAT__2__(a, ...)    a ## __VA_ARGS__
 
-#define VANE_PP_BITAND(x)	VANE_PP_CAT_(VANE_PP_BITAND_, x)
-#define VANE_PP_BITAND_0(y)	0
-#define VANE_PP_BITAND_1(y)	y
+#define VANE_PP_BITAND(x)   VANE_PP_CAT_(VANE_PP_BITAND_, x)
+#define VANE_PP_BITAND_0(y) 0
+#define VANE_PP_BITAND_1(y) y
 
-#define VANE_PP_BITOR(x)	VANE_PP_CAT_(VANE_PP_BITOR_, x)
-#define VANE_PP_BITOR_0(y)	y
-#define VANE_PP_BITOR_1(y)	1
+#define VANE_PP_BITOR(x)    VANE_PP_CAT_(VANE_PP_BITOR_, x)
+#define VANE_PP_BITOR_0(y)  y
+#define VANE_PP_BITOR_1(y)  1
 
-#define VANE_PP_INC(x)	VANE_PP_CAT_(VANE_PP_INC_, x)
+#define VANE_PP_INC(x)  VANE_PP_CAT_(VANE_PP_INC_, x)
 #define VANE_PP_INC_0 1
 #define VANE_PP_INC_1 2
 #define VANE_PP_INC_2 3
@@ -6041,7 +6041,7 @@ namespace std {/////////////////////////////////////////////////////////////////
 #define VANE_PP_INC_63 64
 #define VANE_PP_INC_64 65
 
-#define VANE_PP_DEC(x)	VANE_PP_CAT_(VANE_PP_DEC_, x)
+#define VANE_PP_DEC(x)  VANE_PP_CAT_(VANE_PP_DEC_, x)
 #define VANE_PP_DEC_1 0
 #define VANE_PP_DEC_2 1
 #define VANE_PP_DEC_3 2
@@ -6108,37 +6108,37 @@ namespace std {/////////////////////////////////////////////////////////////////
 #define VANE_PP_DEC_64 63
 
 
-#define VANE_PP_IS_PAREN(...)		VANE_PP_CHECK(VANE_PP_IS_PAREN_PROBE __VA_ARGS__)
-#define VANE_PP_IS_PAREN_PROBE(...)	VANE_PP_PROBE(1),
+#define VANE_PP_IS_PAREN(...)       VANE_PP_CHECK(VANE_PP_IS_PAREN_PROBE __VA_ARGS__)
+#define VANE_PP_IS_PAREN_PROBE(...) VANE_PP_PROBE(1),
 
-#define VANE_PP_NOT(x)	VANE_PP_CHECK(VANE_PP_CAT_(VANE_PP_NOT_, x))
-#define VANE_PP_NOT_0	VANE_PP_PROBE(1),
+#define VANE_PP_NOT(x)  VANE_PP_CHECK(VANE_PP_CAT_(VANE_PP_NOT_, x))
+#define VANE_PP_NOT_0   VANE_PP_PROBE(1),
 
-#define VANE_PP_COMPL(b)	VANE_PP_CAT_(VANE_PP_COMPL_, b)
+#define VANE_PP_COMPL(b)    VANE_PP_CAT_(VANE_PP_COMPL_, b)
 #define VANE_PP_COMPL_0 1
 #define VANE_PP_COMPL_1 0
 
-#define VANE_PP_BOOL(x)	VANE_PP_COMPL(VANE_PP_NOT(x))
+#define VANE_PP_BOOL(x) VANE_PP_COMPL(VANE_PP_NOT(x))
 
-#define VANE_PP_IIF(c)			VANE_PP_IIF_(VANE_PP_CAT_(VANE_PP_IIF_, c))	
-#define VANE_PP_IIF_(...)		__VA_ARGS__	
-#define VANE_PP_IIF_0(t, ...)	__VA_ARGS__
-#define VANE_PP_IIF_1(t, ...)	t
+#define VANE_PP_IIF(c)          VANE_PP_IIF_(VANE_PP_CAT_(VANE_PP_IIF_, c)) 
+#define VANE_PP_IIF_(...)       __VA_ARGS__ 
+#define VANE_PP_IIF_0(t, ...)   __VA_ARGS__
+#define VANE_PP_IIF_1(t, ...)   t
 
-#define VANE_PP_IF(c)	VANE_PP_IIF(VANE_PP_BOOL(c))
+#define VANE_PP_IF(c)   VANE_PP_IIF(VANE_PP_BOOL(c))
 
 #define VANE_PP_EAT(...)
-#define VANE_PP_EXPAND(...)		__VA_ARGS__
-#define VANE_PP_EXPAND_(...)	__VA_ARGS__
+#define VANE_PP_EXPAND(...)     __VA_ARGS__
+#define VANE_PP_EXPAND_(...)    __VA_ARGS__
 
-#define VANE_PP_WHEN(c)			VANE_PP_WHEN_(c)
-#define VANE_PP_WHEN_(c)		VANE_PP_IF(c)(VANE_PP_EXPAND_, VANE_PP_EAT)
-#define VANE_PP_WHEN_NOT(c)		VANE_PP_WHEN_NOT_(c)
-#define VANE_PP_WHEN_NOT_(c)	VANE_PP_IF(c)(VANE_PP_EAT,VANE_PP_EXPAND_)
+#define VANE_PP_WHEN(c)         VANE_PP_WHEN_(c)
+#define VANE_PP_WHEN_(c)        VANE_PP_IF(c)(VANE_PP_EXPAND_, VANE_PP_EAT)
+#define VANE_PP_WHEN_NOT(c)     VANE_PP_WHEN_NOT_(c)
+#define VANE_PP_WHEN_NOT_(c)    VANE_PP_IF(c)(VANE_PP_EAT,VANE_PP_EXPAND_)
 
 #define VANE_PP_EMPTY()
-#define VANE_PP_DEFER(id)		id VANE_PP_EMPTY()
-#define VANE_PP_OBSTRUCT(id)	id VANE_PP_DEFER(VANE_PP_EMPTY)()
+#define VANE_PP_DEFER(id)       id VANE_PP_EMPTY()
+#define VANE_PP_OBSTRUCT(id)    id VANE_PP_DEFER(VANE_PP_EMPTY)()
 
 #define VANE_PP_EVAL(...)  VANE_PP_EVAL1(VANE_PP_EVAL1(VANE_PP_EVAL1(__VA_ARGS__)))
 #define VANE_PP_EVAL1(...) VANE_PP_EVAL2(VANE_PP_EVAL2(VANE_PP_EVAL2(__VA_ARGS__)))
@@ -6148,50 +6148,50 @@ namespace std {/////////////////////////////////////////////////////////////////
 #define VANE_PP_EVAL5(...) __VA_ARGS__
 
 #define VANE_PP_REPEAT(count, macro, ...) \
-	VANE_PP_REPEAT_(count, macro, __VA_ARGS__)
+    VANE_PP_REPEAT_(count, macro, __VA_ARGS__)
 
 #define VANE_PP_REPEAT_(count, macro, ...) \
-	VANE_PP_WHEN(count) \
-	( \
-		VANE_PP_OBSTRUCT(VANE_PP_REPEAT_INDIRECT) () \
-		( \
-			VANE_PP_DEC(count), macro, __VA_ARGS__ \
-		) \
-		VANE_PP_OBSTRUCT(macro) \
-		( \
-			VANE_PP_DEC(count), __VA_ARGS__ \
-		) \
-	)
-#define VANE_PP_REPEAT_INDIRECT()	VANE_PP_REPEAT
+    VANE_PP_WHEN(count) \
+    ( \
+        VANE_PP_OBSTRUCT(VANE_PP_REPEAT_INDIRECT) () \
+        ( \
+            VANE_PP_DEC(count), macro, __VA_ARGS__ \
+        ) \
+        VANE_PP_OBSTRUCT(macro) \
+        ( \
+            VANE_PP_DEC(count), __VA_ARGS__ \
+        ) \
+    )
+#define VANE_PP_REPEAT_INDIRECT()   VANE_PP_REPEAT
 
 
 #define VANE_PP_WHILE(pred, op, ...) \
-	VANE_PP_IF(VANE_PP_GLUE2_(pred,(__VA_ARGS__))) \
-	( \
-		VANE_PP_OBSTRUCT(VANE_WHILE_INDIRECT) () \
-		( \
-			pred, op, VANE_PP_GLUE2_(op,(__VA_ARGS__)) \
-		), \
-		__VA_ARGS__ \
-	)
-#define VANE_WHILE_INDIRECT()	VANE_PP_WHILE
+    VANE_PP_IF(VANE_PP_GLUE2_(pred,(__VA_ARGS__))) \
+    ( \
+        VANE_PP_OBSTRUCT(VANE_WHILE_INDIRECT) () \
+        ( \
+            pred, op, VANE_PP_GLUE2_(op,(__VA_ARGS__)) \
+        ), \
+        __VA_ARGS__ \
+    )
+#define VANE_WHILE_INDIRECT()   VANE_PP_WHILE
 
 #define VANE_PP_COMMA(...) ,
-#define VANE_PP_COMMA_IF(n)	VANE_PP_IF(n)(VANE_PP_COMMA, VANE_PP_EAT)()
+#define VANE_PP_COMMA_IF(n) VANE_PP_IF(n)(VANE_PP_COMMA, VANE_PP_EAT)()
 
-#define VANE_PP_SEMICOLON(...)	;
-#define VANE_PP_SEMICOLON_IF(n)	VANE_PP_IF(n)(VANE_PP_SEMICOLON, VANE_PP_EAT)()
+#define VANE_PP_SEMICOLON(...)  ;
+#define VANE_PP_SEMICOLON_IF(n) VANE_PP_IF(n)(VANE_PP_SEMICOLON, VANE_PP_EAT)()
 
-#define	VANE_PP_VA_COUNT_EC(...)		VANE_PP_IF(VANE_PP_IS_EMPTY_PL(__VA_ARGS__))(0,VANE_PP_VA_COUNT(__VA_ARGS__))
-#define	VANE_PP_TUPLE_SIZE_EC(tuple)	VANE_PP_VA_COUNT_EC tuple
+#define VANE_PP_VA_COUNT_EC(...)        VANE_PP_IF(VANE_PP_IS_EMPTY_PL(__VA_ARGS__))(0,VANE_PP_VA_COUNT(__VA_ARGS__))
+#define VANE_PP_TUPLE_SIZE_EC(tuple)    VANE_PP_VA_COUNT_EC tuple
 
-#define	VANE_PP_IS_EMPTY_PL(...)	VANE_PP_IS_EMPTY_PL_(__VA_ARGS__)
-#define	VANE_PP_IS_EMPTY_PL_(...)	VANE_PP_IS_EMPTY(__VA_ARGS__)
+#define VANE_PP_IS_EMPTY_PL(...)    VANE_PP_IS_EMPTY_PL_(__VA_ARGS__)
+#define VANE_PP_IS_EMPTY_PL_(...)   VANE_PP_IS_EMPTY(__VA_ARGS__)
 
-#define VANE_PP_COLON(...)	:
-#define VANE_PP_COLON_IF(n)	VANE_PP_IF(n)(VANE_PP_COLON, VANE_PP_EAT)()
+#define VANE_PP_COLON(...)  :
+#define VANE_PP_COLON_IF(n) VANE_PP_IF(n)(VANE_PP_COLON, VANE_PP_EAT)()
 
-#define	VANE_UNSEQ(seq)	VANE_PP_CAT(VANE_UNSEQ_,VANE_SEQ_SIZE(seq)) seq
+#define VANE_UNSEQ(seq) VANE_PP_CAT(VANE_UNSEQ_,VANE_SEQ_SIZE(seq)) seq
 #define VANE_UNSEQ_1(...) __VA_ARGS__ 
 #define VANE_UNSEQ_2(...) __VA_ARGS__ VANE_UNSEQ_1
 #define VANE_UNSEQ_3(...) __VA_ARGS__ VANE_UNSEQ_2
@@ -6217,8 +6217,8 @@ namespace std {/////////////////////////////////////////////////////////////////
 #define VANE_SEQ_SIZE_VANE_SEQ_SIZE_6 6
 
 
-#define	VANE_PP_SEQ_POP_2(...)	(__VA_ARGS__),	VANE_PP_SEQ_POP_1
-#define	VANE_PP_SEQ_POP_1(...)	(__VA_ARGS__),
+#define VANE_PP_SEQ_POP_2(...)  (__VA_ARGS__),  VANE_PP_SEQ_POP_1
+#define VANE_PP_SEQ_POP_1(...)  (__VA_ARGS__),
 
 
 #include <array>
@@ -6226,318 +6226,639 @@ namespace std {/////////////////////////////////////////////////////////////////
 #include <exception>
 
 namespace vane {
-	template<typename> struct  duck;
+    template<typename> struct  duck;
 
-	struct bad_duck { };
-	struct bad_duck_call : std::runtime_error {
-		bad_duck_call(const char *fname) : std::runtime_error(std::string("bad_duck_call: ") + fname + "() is called") {}
+    struct bad_duck { };
+    struct bad_duck_call : std::runtime_error {
+        bad_duck_call(const char *fname) : std::runtime_error(std::string("bad_duck_call: ") + fname + "() is called") {}
 
-		[[noreturn]] 
-		static __vane_noinline
-		void raise(const char *fname) {
-			throw bad_duck_call(fname);
-		}
-	};
+        [[noreturn]] 
+        static __vane_noinline
+        void raise(const char *fname) {
+            throw bad_duck_call(fname);
+        }
+    };
 
-	template<int N>
-	struct reducer {
-		template<typename Op, typename T, typename It>
-		static constexpr
-		T get(Op op, T i, It p) {
-			return op(*p, reducer<N-1>::get(i, p+1, op));
-		}
-	};
-	template<>
-	struct reducer<1> {
-		template<typename Op, typename T, typename It>
-		static constexpr
-		T get(Op op, T i, It p) {
-			return i;
-		}
-	};
+    template<int N>
+    struct reducer {
+        template<typename Op, typename T, typename It>
+        static constexpr
+        T get(Op op, T i, It p) {
+            return op(*p, reducer<N-1>::get(i, p+1, op));
+        }
+    };
+    template<>
+    struct reducer<1> {
+        template<typename Op, typename T, typename It>
+        static constexpr
+        T get(Op op, T i, It p) {
+            return i;
+        }
+    };
 }
 
-#define	vane_duck_INTERFACE(seq)	VANE_PP_DUCKINTERFACE(seq)
-#define	VANE_PP_DUCKINTERFACE(a)	VANE_PP_DUCKINTERFACE_1((VANE_PP_SEQ_POP_2 a))
-#define	VANE_PP_DUCKINTERFACE_1(a)	VANE_PP_DUCKINTERFACE_2 a
+#define vane_duck_INTERFACE(seq)    VANE_PP_DUCKINTERFACE(seq)
+#define VANE_PP_DUCKINTERFACE(a)    VANE_PP_DUCKINTERFACE_1((VANE_PP_SEQ_POP_2 a))
+#define VANE_PP_DUCKINTERFACE_1(a)  VANE_PP_DUCKINTERFACE_2 a
 
-#define	VANE_PP_DUCKINTERFACE_2(a,b,...) \
-		VANE_PP_IF( VANE_PP_BITAND(VANE_PP_NOT(VANE_PP_IS_PAREN a))(VANE_PP_IS_USING a)) \
-		(\
-			VANE_PP_DUCKINTERFACE_USING,\
-			VANE_PP_DUCKINTERFACE_DEF\
-		)(a,b, __VA_ARGS__)
+#define VANE_PP_DUCKINTERFACE_2(a,b,...) \
+        VANE_PP_IF( VANE_PP_BITAND(VANE_PP_NOT(VANE_PP_IS_PAREN a))(VANE_PP_IS_USING a)) \
+        (\
+            VANE_PP_DUCKINTERFACE_USING,\
+            VANE_PP_DUCKINTERFACE_DEF\
+        )(a,b, __VA_ARGS__)
 
 #define VANE_PP_DUCKINTERFACE_USING(upart,flist,...) \
-	VANE_PP_WHEN_NOT( VANE_PP_IS_EMPTY(__VA_ARGS__) ) ( ;static_assert(0,"syntax error //@vane_duck_INTERFACE"); ) \
-	VANE_PP_EVAL(VANE_PP_REPEAT(VANE_PP_VA_COUNT flist, VANE_PP_DUCKINTERFACE_USING_CHECKLIST, flist)) \
-	VANE_PP_DUCKINTERFACE_DEF_DUCK(VANE_PP_EMPTY(),(VANE_PP_CAT_(VANE_PP_EXPAND_,VANE_PP_EXPAND upart)), flist)
+    VANE_PP_WHEN_NOT( VANE_PP_IS_EMPTY(__VA_ARGS__) ) ( ;static_assert(0,"syntax error //@vane_duck_INTERFACE"); ) \
+    VANE_PP_EVAL(VANE_PP_REPEAT(VANE_PP_VA_COUNT flist, VANE_PP_DUCKINTERFACE_USING_CHECKLIST, flist)) \
+    VANE_PP_DUCKINTERFACE_DEF_DUCK(VANE_PP_EMPTY(),(VANE_PP_CAT_(VANE_PP_EXPAND_,VANE_PP_EXPAND upart)), flist)
 
-#define VANE_PP_DUCKINTERFACE_USING_CHECKLIST(i, flist)		VANE_PP_DUCKINTERFACE_USING_CHECKLIST_I(i, VANE_PP_TUPLE_ELEM(i,flist))
-#define VANE_PP_DUCKINTERFACE_USING_CHECKLIST_I(i, decl)	VANE_PP_WHEN_NOT( VANE_PP_IS_PAREN(decl) ) ( ;static_assert(0,"syntax error //@vane_duck_INTERFACE"); )
+#define VANE_PP_DUCKINTERFACE_USING_CHECKLIST(i, flist)     VANE_PP_DUCKINTERFACE_USING_CHECKLIST_I(i, VANE_PP_TUPLE_ELEM(i,flist))
+#define VANE_PP_DUCKINTERFACE_USING_CHECKLIST_I(i, decl)    VANE_PP_WHEN_NOT( VANE_PP_IS_PAREN(decl) ) ( ;static_assert(0,"syntax error //@vane_duck_INTERFACE"); )
 
-#define	VANE_PP_DUCKINTERFACE_DEF(a,b,...) \
-	VANE_PP_DUCKINTERFACE_DEF_1(\
-		VANE_PP_IF( VANE_PP_BITAND(VANE_PP_NOT(VANE_PP_IS_PAREN a))(VANE_PP_IS_NAMESPACE a)) \
-		( \
-			(a,b,__VA_ARGS__),\
-			VANE_PP_IF( VANE_PP_BITAND(VANE_PP_NOT(VANE_PP_IS_PAREN b))(VANE_PP_IS_NAMESPACE b)) \
-			(\
-				(b,a, __VA_ARGS__),\
-				(,a,b __VA_ARGS__)\
-			)\
-		)\
-	)
-#define	VANE_PP_DUCKINTERFACE_DEF_1(a)	VANE_PP_DUCKINTERFACE_DEF_PARTS a
-#define	VANE_PP_DUCKINTERFACE_DEF_PARTS(nspart,namepart,flist,...) \
-		VANE_PP_DUCKINTERFACE_DEF_IF(nspart,namepart, flist) \
-		VANE_PP_DUCKINTERFACE_DEF_DUCK( nspart,namepart, flist)
+#define VANE_PP_DUCKINTERFACE_DEF(a,b,...) \
+    VANE_PP_DUCKINTERFACE_DEF_1(\
+        VANE_PP_IF( VANE_PP_BITAND(VANE_PP_NOT(VANE_PP_IS_PAREN a))(VANE_PP_IS_NAMESPACE a)) \
+        ( \
+            (a,b,__VA_ARGS__),\
+            VANE_PP_IF( VANE_PP_BITAND(VANE_PP_NOT(VANE_PP_IS_PAREN b))(VANE_PP_IS_NAMESPACE b)) \
+            (\
+                (b,a, __VA_ARGS__),\
+                (,a,b __VA_ARGS__)\
+            )\
+        )\
+    )
+#define VANE_PP_DUCKINTERFACE_DEF_1(a)  VANE_PP_DUCKINTERFACE_DEF_PARTS a
+#define VANE_PP_DUCKINTERFACE_DEF_PARTS(nspart,namepart,flist,...) \
+        VANE_PP_DUCKINTERFACE_DEF_IF(nspart,namepart, flist) \
+        VANE_PP_DUCKINTERFACE_DEF_DUCK( nspart,namepart, flist)
 
-#define VANE_PP_DUCKINTERFACE_DECLITEM_APPLY(m, a, seq)	VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_1(m, a, seq())
-#define VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_1(m, a, seq)	VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_2(m, a, VANE_PP_SEQ_POP_1 seq)
-#define	VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_2(...)			VANE_PP_GLUE_L2_(VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_4,(__VA_ARGS__))
-#define	VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_4(m,a0,a1,...) \
-	VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_5\
-	VANE_PP_IF( VANE_PP_IS_PAREN( VANE_PP_EXPAND a1 ) ) (\
-		( m, a0, ([[VANE_PP_EXPAND_ VANE_PP_EXPAND a1]]), VANE_PP_SEQ_POP_1 __VA_ARGS__ ),\
-		( m, a0,(),a1, __VA_ARGS__)\
-	)
-#define	VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_5(...)				VANE_PP_GLUE_L3_(VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_6,(__VA_ARGS__))
-#define	VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_6(m,a0,a1,a2,...)	m(a0,a1,a2, VANE_UNSEQ(__VA_ARGS__))
+#define VANE_PP_DUCKINTERFACE_DECLITEM_APPLY(m, a, seq) VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_1(m, a, seq())
+#define VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_1(m, a, seq)   VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_2(m, a, VANE_PP_SEQ_POP_1 seq)
+#define VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_2(...)         VANE_PP_GLUE_L2_(VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_4,(__VA_ARGS__))
+#define VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_4(m,a0,a1,...) \
+    VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_5\
+    VANE_PP_IF( VANE_PP_IS_PAREN( VANE_PP_EXPAND a1 ) ) (\
+        ( m, a0, ([[VANE_PP_EXPAND_ VANE_PP_EXPAND a1]]), VANE_PP_SEQ_POP_1 __VA_ARGS__ ),\
+        ( m, a0,(),a1, __VA_ARGS__)\
+    )
+#define VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_5(...)             VANE_PP_GLUE_L3_(VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_6,(__VA_ARGS__))
+#define VANE_PP_DUCKINTERFACE_DECLITEM_APPLY_6(m,a0,a1,a2,...)  m(a0,a1,a2, VANE_UNSEQ(__VA_ARGS__))
 
-#define	VANE_PP_DUCKINTERFACE_DEF_IF(nspart, namepart, bodypart) \
-	VANE_PP_GLUE_(VANE_PP_DUCKINTERFACE_DECL_IF,(nspart, VANE_PP_EXPAND namepart))\
-	VANE_PP_DUCKINTERFACE_DEF_IF_BODY(bodypart) \
-	VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY(nspart) ) ( } )
+#define VANE_PP_DUCKINTERFACE_DEF_IF(nspart, namepart, bodypart) \
+    VANE_PP_GLUE_(VANE_PP_DUCKINTERFACE_DECL_IF,(nspart, VANE_PP_EXPAND namepart))\
+    VANE_PP_DUCKINTERFACE_DEF_IF_BODY(bodypart) \
+    VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY(nspart) ) ( } )
 
-#define	VANE_PP_DUCKINTERFACE_DECL_IF(__NS, __IF,...)\
-	VANE_PP_DUCKINTERFACE_DECL_IF_1(\
-			(VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY(__NS) ) ( VANE_PP_CAT_(VANE_PP_EXPAND_,VANE_PP_EXPAND __NS))) \
-			, __IF,__VA_ARGS__)
+#define VANE_PP_DUCKINTERFACE_DECL_IF(__NS, __IF,...)\
+    VANE_PP_DUCKINTERFACE_DECL_IF_1(\
+            (VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY(__NS) ) ( VANE_PP_CAT_(VANE_PP_EXPAND_,VANE_PP_EXPAND __NS))) \
+            , __IF,__VA_ARGS__)
 
-#define	VANE_PP_DUCKINTERFACE_DECL_IF_1(__NS, __IF,...)\
-	VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY __NS ) ( \
-		namespace VANE_PP_EXPAND __NS { \
-	)\
-	struct __vane_novtable __IF  __VA_ARGS__ {
+#define VANE_PP_DUCKINTERFACE_DECL_IF_1(__NS, __IF,...)\
+    VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY __NS ) ( \
+        namespace VANE_PP_EXPAND __NS { \
+    )\
+    struct __vane_novtable __IF  __VA_ARGS__ {
 
-#define	VANE_PP_DUCKINTERFACE_DEF_IF_BODY(flist)\
-		VANE_PP_EVAL(VANE_PP_REPEAT(VANE_PP_VA_COUNT flist, VANE_PP_DUCKINTERFACE_IF_DECL_ITEM, flist))\
-	};
+#define VANE_PP_DUCKINTERFACE_DEF_IF_BODY(flist)\
+        VANE_PP_EVAL(VANE_PP_REPEAT(VANE_PP_VA_COUNT flist, VANE_PP_DUCKINTERFACE_IF_DECL_ITEM, flist))\
+    };
 
 #define VANE_PP_DUCKINTERFACE_IF_DECL_ITEM(i, flist) \
-	VANE_PP_DUCKINTERFACE_IF_DECL_ITEM_I(i, VANE_PP_TUPLE_ELEM(i,flist))
+    VANE_PP_DUCKINTERFACE_IF_DECL_ITEM_I(i, VANE_PP_TUPLE_ELEM(i,flist))
 
 #define VANE_PP_DUCKINTERFACE_IF_DECL_ITEM_I(i, decl) \
-	VANE_PP_IF(VANE_PP_IS_PAREN(decl))(\
-		VANE_PP_DUCKINTERFACE_IF_DECL_FUNC1,\
-		VANE_PP_EAT\
-	)(i,decl)\
-	VANE_PP_IF(VANE_PP_IS_PAREN(decl))(\
-		VANE_PP_EMPTY(),\
-		VANE_PP_IF( VANE_PP_IS_QUOTE(decl) ) (\
-			VANE_PP_CAT(VANE_PP_EXPAND_,decl), \
-			decl;\
-		)\
-	)
+    VANE_PP_IF(VANE_PP_IS_PAREN(decl))(\
+        VANE_PP_DUCKINTERFACE_IF_DECL_FUNC1,\
+        VANE_PP_EAT\
+    )(i,decl)\
+    VANE_PP_IF(VANE_PP_IS_PAREN(decl))(\
+        VANE_PP_EMPTY(),\
+        VANE_PP_IF( VANE_PP_IS_QUOTE(decl) ) (\
+            VANE_PP_CAT(VANE_PP_EXPAND_,decl), \
+            decl;\
+        )\
+    )
 
 #define VANE_PP_DUCKINTERFACE_IF_DECL_FUNC1(i, seq) \
-	VANE_PP_DUCKINTERFACE_DECLITEM_APPLY(VANE_PP_DUCKINTERFACE_IF_DECL_FUNC1_DO, dummy, seq)
+    VANE_PP_DUCKINTERFACE_DECLITEM_APPLY(VANE_PP_DUCKINTERFACE_IF_DECL_FUNC1_DO, dummy, seq)
 
 #define VANE_PP_DUCKINTERFACE_IF_DECL_FUNC1_DO(dummy,attr,decl,...) \
-	VANE_PP_EXPAND attr\
-	virtual VANE_PP_TUPLE_ELEM(1,decl) \
-	VANE_PP_TUPLE_ELEM(0,decl)(VANE_PP_REPEAT(VANE_PP_TUPLE_SIZE(VANE_PP_TUPLE_ELEM(2,decl)), VANE_PP_DUCKINTERFACE_DECL_IF_ARG1, VANE_PP_TUPLE_ELEM(2,decl)) ) __VA_ARGS__ = 0;
+    VANE_PP_EXPAND attr\
+    virtual VANE_PP_TUPLE_ELEM(1,decl) \
+    VANE_PP_TUPLE_ELEM(0,decl)(VANE_PP_REPEAT(VANE_PP_TUPLE_SIZE(VANE_PP_TUPLE_ELEM(2,decl)), VANE_PP_DUCKINTERFACE_DECL_IF_ARG1, VANE_PP_TUPLE_ELEM(2,decl)) ) __VA_ARGS__ = 0;
 
-#define VANE_PP_DUCKINTERFACE_DECL_IF_ARG1(i, tags)	\
-	VANE_PP_COMMA_IF(i) VANE_PP_TUPLE_ELEM(i,tags)
+#define VANE_PP_DUCKINTERFACE_DECL_IF_ARG1(i, tags) \
+    VANE_PP_COMMA_IF(i) VANE_PP_TUPLE_ELEM(i,tags)
 
 #define VANE_PP_DUCKINTERFACE_BASE_DUCK_DECL_ITEM(i, flist) \
-	VANE_PP_DUCKINTERFACE_BASE_DUCK_DECL_ITEM_I(i, VANE_PP_TUPLE_ELEM(i,flist))
+    VANE_PP_DUCKINTERFACE_BASE_DUCK_DECL_ITEM_I(i, VANE_PP_TUPLE_ELEM(i,flist))
 
 #define VANE_PP_DUCKINTERFACE_BASE_DUCK_DECL_ITEM_I(i, decl) \
-	VANE_PP_IF( VANE_PP_IS_PAREN(decl) ) ( VANE_PP_DUCKINTERFACE_BASE_DUCK_DECL_ITEM_FUNC1,VANE_PP_EAT)(i,decl)
+    VANE_PP_IF( VANE_PP_IS_PAREN(decl) ) ( VANE_PP_DUCKINTERFACE_BASE_DUCK_DECL_ITEM_FUNC1,VANE_PP_EAT)(i,decl)
 
 #define VANE_PP_DUCKINTERFACE_BASE_DUCK_DECL_ITEM_FUNC1(i,seq)\
-	VANE_PP_DUCKINTERFACE_DECLITEM_APPLY(VANE_PP_DUCKINTERFACE_BASE_DUCK_DECL_ITEM_FUNC1_DO, dummy, seq)
+    VANE_PP_DUCKINTERFACE_DECLITEM_APPLY(VANE_PP_DUCKINTERFACE_BASE_DUCK_DECL_ITEM_FUNC1_DO, dummy, seq)
 
 #define VANE_PP_DUCKINTERFACE_BASE_DUCK_DECL_ITEM_FUNC1_DO(dummy,attr,decl,...) \
-	VANE_PP_EXPAND attr\
-	VANE_PP_TUPLE_ELEM(1,decl) \
-	VANE_PP_TUPLE_ELEM(0,decl) \
-	(VANE_PP_REPEAT(VANE_PP_TUPLE_SIZE_EC(VANE_PP_TUPLE_ELEM(2,decl)), VANE_PP_DUCKINTERFACE_DECL_BASE_ARG1, VANE_PP_TUPLE_ELEM(2,decl)))\
-	const { \
-		return _get_obj()->VANE_PP_TUPLE_ELEM(0,decl)	\
-		(VANE_PP_REPEAT(VANE_PP_TUPLE_SIZE_EC(VANE_PP_TUPLE_ELEM(2,decl)), VANE_PP_DUCKINTERFACE_DECL_CALL_ARG1, VANE_PP_TUPLE_ELEM(2,decl)) );\
-	}\
-	VANE_PP_EXPAND attr\
-	VANE_PP_TUPLE_ELEM(1,decl) \
-	VANE_PP_TUPLE_ELEM(0,decl) \
-	(VANE_PP_REPEAT(VANE_PP_TUPLE_SIZE_EC(VANE_PP_TUPLE_ELEM(2,decl)), VANE_PP_DUCKINTERFACE_DECL_BASE_ARG1, VANE_PP_TUPLE_ELEM(2,decl)))\
-	const volatile { \
-		return _get_obj()->VANE_PP_TUPLE_ELEM(0,decl)	\
-		(VANE_PP_REPEAT(VANE_PP_TUPLE_SIZE_EC(VANE_PP_TUPLE_ELEM(2,decl)), VANE_PP_DUCKINTERFACE_DECL_CALL_ARG1, VANE_PP_TUPLE_ELEM(2,decl)) );\
-	}
+    VANE_PP_EXPAND attr\
+    VANE_PP_TUPLE_ELEM(1,decl) \
+    VANE_PP_TUPLE_ELEM(0,decl) \
+    (VANE_PP_REPEAT(VANE_PP_TUPLE_SIZE_EC(VANE_PP_TUPLE_ELEM(2,decl)), VANE_PP_DUCKINTERFACE_DECL_BASE_ARG1, VANE_PP_TUPLE_ELEM(2,decl)))\
+    const { \
+        return _get_obj()->VANE_PP_TUPLE_ELEM(0,decl)   \
+        (VANE_PP_REPEAT(VANE_PP_TUPLE_SIZE_EC(VANE_PP_TUPLE_ELEM(2,decl)), VANE_PP_DUCKINTERFACE_DECL_CALL_ARG1, VANE_PP_TUPLE_ELEM(2,decl)) );\
+    }\
+    VANE_PP_EXPAND attr\
+    VANE_PP_TUPLE_ELEM(1,decl) \
+    VANE_PP_TUPLE_ELEM(0,decl) \
+    (VANE_PP_REPEAT(VANE_PP_TUPLE_SIZE_EC(VANE_PP_TUPLE_ELEM(2,decl)), VANE_PP_DUCKINTERFACE_DECL_BASE_ARG1, VANE_PP_TUPLE_ELEM(2,decl)))\
+    const volatile { \
+        return _get_obj()->VANE_PP_TUPLE_ELEM(0,decl)   \
+        (VANE_PP_REPEAT(VANE_PP_TUPLE_SIZE_EC(VANE_PP_TUPLE_ELEM(2,decl)), VANE_PP_DUCKINTERFACE_DECL_CALL_ARG1, VANE_PP_TUPLE_ELEM(2,decl)) );\
+    }
 
-#define VANE_PP_DUCKINTERFACE_DECL_BASE_ARG1(i, params)	\
-	VANE_PP_COMMA_IF(i) \
-	VANE_PP_TUPLE_ELEM(i,params) \
-	VANE_PP_IF( VANE_PP_IS_ONLY(void, VANE_PP_TUPLE_ELEM(i,params))) ( VANE_PP_EMPTY(), _ ## i )
+#define VANE_PP_DUCKINTERFACE_DECL_BASE_ARG1(i, params) \
+    VANE_PP_COMMA_IF(i) \
+    VANE_PP_TUPLE_ELEM(i,params) \
+    VANE_PP_IF( VANE_PP_IS_ONLY(void, VANE_PP_TUPLE_ELEM(i,params))) ( VANE_PP_EMPTY(), _ ## i )
 
-#define VANE_PP_DUCKINTERFACE_DECL_CALL_ARG1(i, params)	\
-	VANE_PP_COMMA_IF(i) \
-	VANE_PP_IF( VANE_PP_IS_ONLY(void, VANE_PP_TUPLE_ELEM(i,params))) ( VANE_PP_EMPTY(), _ ## i )
+#define VANE_PP_DUCKINTERFACE_DECL_CALL_ARG1(i, params) \
+    VANE_PP_COMMA_IF(i) \
+    VANE_PP_IF( VANE_PP_IS_ONLY(void, VANE_PP_TUPLE_ELEM(i,params))) ( VANE_PP_EMPTY(), _ ## i )
 
 #define VANE_PP_DUCKINTERFACE_BAD_DUCK_DECL_ITEM(i, flist, ifname) \
-	VANE_PP_DUCKINTERFACE_BAD_DUCK_DECL_ITEM_I(i, VANE_PP_TUPLE_ELEM(i,flist), ifname) \
+    VANE_PP_DUCKINTERFACE_BAD_DUCK_DECL_ITEM_I(i, VANE_PP_TUPLE_ELEM(i,flist), ifname) \
 
 #define VANE_PP_DUCKINTERFACE_BAD_DUCK_DECL_ITEM_I(i, decl, ifname) \
-	VANE_PP_IF( VANE_PP_IS_PAREN(decl) ) ( VANE_PP_DUCKINTERFACE_BAD_DUCK_DECL_ITEM_FUNC1,VANE_PP_EAT)(i, decl, ifname)
+    VANE_PP_IF( VANE_PP_IS_PAREN(decl) ) ( VANE_PP_DUCKINTERFACE_BAD_DUCK_DECL_ITEM_FUNC1,VANE_PP_EAT)(i, decl, ifname)
 
 #define VANE_PP_DUCKINTERFACE_BAD_DUCK_DECL_ITEM_FUNC1(i, seq, ifname) \
-	VANE_PP_DUCKINTERFACE_DECLITEM_APPLY(VANE_PP_DUCKINTERFACE_BAD_DUCK_DECL_ITEM_FUNC1_DO, ifname, seq)
+    VANE_PP_DUCKINTERFACE_DECLITEM_APPLY(VANE_PP_DUCKINTERFACE_BAD_DUCK_DECL_ITEM_FUNC1_DO, ifname, seq)
 
 #define VANE_PP_DUCKINTERFACE_BAD_DUCK_DECL_ITEM_FUNC1_DO(ifname,attr, decl,...) \
-	[[noreturn]]\
-	static\
-	VANE_PP_TUPLE_ELEM(1,decl) \
-	VANE_PP_TUPLE_ELEM(0,decl) \
-	(VANE_PP_REPEAT(VANE_PP_TUPLE_SIZE_EC(VANE_PP_TUPLE_ELEM(2,decl)), VANE_PP_DUCKINTERFACE_DECL_IF_ARG1, VANE_PP_TUPLE_ELEM(2,decl)) )\
-	{ DOUT_SIG() bad_duck_call::raise(VANE_PP_STRINGIZE( ifname::VANE_PP_TUPLE_ELEM(0,decl) )); }
+    [[noreturn]]\
+    static\
+    VANE_PP_TUPLE_ELEM(1,decl) \
+    VANE_PP_TUPLE_ELEM(0,decl) \
+    (VANE_PP_REPEAT(VANE_PP_TUPLE_SIZE_EC(VANE_PP_TUPLE_ELEM(2,decl)), VANE_PP_DUCKINTERFACE_DECL_IF_ARG1, VANE_PP_TUPLE_ELEM(2,decl)) )\
+    { DOUT_SIG() bad_duck_call::raise(VANE_PP_STRINGIZE( ifname::VANE_PP_TUPLE_ELEM(0,decl) )); }
 
-#define VANE_PP_DUCKINTERFACE_T_DUCK_DECL_ITEM(i, flist)	VANE_PP_DUCKINTERFACE_T_DUCK_DECL_ITEM_I(i, VANE_PP_TUPLE_ELEM(i,flist))
+#define VANE_PP_DUCKINTERFACE_T_DUCK_DECL_ITEM(i, flist)    VANE_PP_DUCKINTERFACE_T_DUCK_DECL_ITEM_I(i, VANE_PP_TUPLE_ELEM(i,flist))
 
 #define VANE_PP_DUCKINTERFACE_T_DUCK_DECL_ITEM_I(i, decl) \
-	VANE_PP_IF( VANE_PP_IS_PAREN(decl) ) ( VANE_PP_DUCKINTERFACE_T_DUCK_DECL_ITEM_FUNC1,VANE_PP_EAT)(i, decl) 
+    VANE_PP_IF( VANE_PP_IS_PAREN(decl) ) ( VANE_PP_DUCKINTERFACE_T_DUCK_DECL_ITEM_FUNC1,VANE_PP_EAT)(i, decl) 
 
 #define VANE_PP_DUCKINTERFACE_T_DUCK_DECL_ITEM_FUNC1(i, seq) \
-		VANE_PP_DUCKINTERFACE_DECLITEM_APPLY(VANE_PP_DUCKINTERFACE_T_DUCK_DECL_ITEM_FUNC1_DO, dummy,seq)
+        VANE_PP_DUCKINTERFACE_DECLITEM_APPLY(VANE_PP_DUCKINTERFACE_T_DUCK_DECL_ITEM_FUNC1_DO, dummy,seq)
 
 #define VANE_PP_DUCKINTERFACE_T_DUCK_DECL_ITEM_FUNC1_DO(dummy, attr, decl,...) \
-		VANE_PP_EXPAND attr\
-		VANE_PP_TUPLE_ELEM(1,decl) \
-		VANE_PP_TUPLE_ELEM(0,decl) \
-		(VANE_PP_REPEAT(VANE_PP_TUPLE_SIZE_EC(VANE_PP_TUPLE_ELEM(2,decl)), VANE_PP_DUCKINTERFACE_DECL_BASE_ARG1, VANE_PP_TUPLE_ELEM(2,decl)))\
-		__VA_ARGS__ override { \
-			return _data->VANE_PP_TUPLE_ELEM(0,decl) \
-			(VANE_PP_REPEAT(VANE_PP_TUPLE_SIZE_EC(VANE_PP_TUPLE_ELEM(2,decl)), VANE_PP_DUCKINTERFACE_DECL_CALL_ARG1, VANE_PP_TUPLE_ELEM(2,decl)) );\
-		}
+        VANE_PP_EXPAND attr\
+        VANE_PP_TUPLE_ELEM(1,decl) \
+        VANE_PP_TUPLE_ELEM(0,decl) \
+        (VANE_PP_REPEAT(VANE_PP_TUPLE_SIZE_EC(VANE_PP_TUPLE_ELEM(2,decl)), VANE_PP_DUCKINTERFACE_DECL_BASE_ARG1, VANE_PP_TUPLE_ELEM(2,decl)))\
+        __VA_ARGS__ override { \
+            return _data->VANE_PP_TUPLE_ELEM(0,decl) \
+            (VANE_PP_REPEAT(VANE_PP_TUPLE_SIZE_EC(VANE_PP_TUPLE_ELEM(2,decl)), VANE_PP_DUCKINTERFACE_DECL_CALL_ARG1, VANE_PP_TUPLE_ELEM(2,decl)) );\
+        }
 
-#define	VANE_PP_NS_DETAIL_DUCK(__IF)	VANE_PP_CAT_(_detail_duck_,__IF)
+#define VANE_PP_NS_DETAIL_DUCK(__IF)    VANE_PP_CAT_(_detail_duck_,__IF)
 
-#define	VANE_PP_DUCKINTERFACE_DEF_DUCK(nspart, namepart, flist) \
-	VANE_PP_DUCKINTERFACE_DEF_DUCK_1(\
-		VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY(nspart) ) \
-			( VANE_PP_CAT_(VANE_PP_EXPAND_,VANE_PP_EXPAND_ nspart)),\
-		VANE_PP_TUPLE_ELEM(0,namepart),\
-		flist)
+#define VANE_PP_DUCKINTERFACE_DEF_DUCK(nspart, namepart, flist) \
+    VANE_PP_DUCKINTERFACE_DEF_DUCK_1(\
+        VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY(nspart) ) \
+            ( VANE_PP_CAT_(VANE_PP_EXPAND_,VANE_PP_EXPAND_ nspart)),\
+        VANE_PP_TUPLE_ELEM(0,namepart),\
+        flist)
 
 
 #define VANE_PP_DUCKINTERFACE_DEF_DUCK_1(__NS, ifname, flist) \
-namespace vane {																					\
-namespace VANE_PP_NS_DETAIL_DUCK(ifname) {															\
-VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY(__NS) ) (										    		    \
-namespace __NS {																					\
-)																					    		    \
-                                                                                        		    \
-template<typename __IF>                                                                 		    \
-class _duck_XX                                                                         		    	\
-{                                                                                       		    \
-	template<typename T>						                                           		    \
-	struct __Duck : std::remove_cv<__IF>::type                                       		    	\
-	{                                                                                   		    \
-		T	*_data;                                                                     		    \
-                                                                                        		    \
-		__Duck()     : _data(nullptr)	{ }			                                		    	\
-		__Duck(T &t) : _data(&t)		{ }															\
-                                                                                        		    \
-	public:																							\
-		VANE_PP_EVAL(VANE_PP_REPEAT(VANE_PP_VA_COUNT flist, VANE_PP_DUCKINTERFACE_T_DUCK_DECL_ITEM, flist)) \
-	};                                                                                  		    \
-                                                                                        		    \
-	struct _Store : __IF {                                                                  		\
-		void *_data;                                                                        		\
-	};                                                                                     			\
-	std::array<char, sizeof(_Store)>	_store;                                                		\
-	using OBJ_TYPE = __IF;																			\
-	OBJ_TYPE *_get_obj() const	{ return reinterpret_cast<OBJ_TYPE*>(const_cast<std::array<char, sizeof(_Store)>*>(&_store)); }\
-	OBJ_TYPE *_get_obj() const volatile	{ return reinterpret_cast<OBJ_TYPE*>(const_cast<std::array<char, sizeof(_Store)>*>(&_store)); }\
-public:																								\
-		struct bad_duck {                                                                           \
-			VANE_PP_EVAL(VANE_PP_REPEAT(VANE_PP_VA_COUNT flist, VANE_PP_DUCKINTERFACE_BAD_DUCK_DECL_ITEM, flist,__NS::ifname)) \
-		};                                                                                          \
-																									\
-	template <typename T, typename																	\
-		=	typename std::enable_if< 																\
-				   !std::is_base_of<_duck_XX<const          typename std::remove_cv<__IF>::type>, T>::value	\
-				&& !std::is_base_of<_duck_XX<      volatile typename std::remove_cv<__IF>::type>, T>::value	\
-				&& !std::is_base_of<_duck_XX<const volatile typename std::remove_cv<__IF>::type>, T>::value	\
-				&& ( !std::is_const<T>::value    || std::is_const<__IF>::value )					\
-				&& ( !std::is_volatile<T>::value || std::is_volatile<__IF>::value )					\
-			>::type>																				\
-	_duck_XX(T &t) {																				\
-		using __T = typename std::remove_cv<T>::type;												\
-		new(&_store) __Duck<__T>(const_cast<__T&>(t));												\
-	}                                                                                       	    \
+namespace vane {                                                                                    \
+namespace VANE_PP_NS_DETAIL_DUCK(ifname) {                                                          \
+VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY(__NS) ) (                                                        \
+namespace __NS {                                                                                    \
+)                                                                                                   \
                                                                                                     \
-	template <typename T>																			\
-	_duck_XX(T *t) : _duck_XX(*t) { }																\
+template<typename __IF>                                                                             \
+class _duck_XX                                                                                      \
+{                                                                                                   \
+    template<typename T>                                                                            \
+    struct __Duck : std::remove_cv<__IF>::type                                                      \
+    {                                                                                               \
+        T   *_data;                                                                                 \
                                                                                                     \
-public:																								\
-	_duck_XX() { }																					\
-	_duck_XX(vane::bad_duck) {																		\
-		new(&_store) __Duck<bad_duck>();                                                            \
-	}                                                                                               \
-	_duck_XX(std::nullptr_t) {																		\
-		std::fill(_store.begin(), _store.end(), 0);                                                 \
-	}                                                                                               \
-	operator __IF&() const			{ return *_get_obj(); }											\
-	operator __IF*() const			{ return  _get_obj(); }											\
-	operator __IF&() const volatile	{ return *_get_obj(); }                        	    			\
-	operator __IF*() const volatile	{ return  _get_obj(); }                        	    			\
-																									\
-	operator bool() const          {																\
-		ptrdiff_t *p = (ptrdiff_t*)this;															\
-		return vane::reducer<sizeof(*this)/sizeof(*p)-1>::get(std::bit_or<ptrdiff_t>(), *p, p);		\
-	}																								\
-	operator bool() const volatile	{																\
-		ptrdiff_t *p = (ptrdiff_t*)this;															\
-		return vane::reducer<sizeof(*this)/sizeof(*p)-1>::get(std::bit_or<ptrdiff_t>(), *p, p);		\
-	}																								\
-                                                                                            	    \
-	VANE_PP_EVAL(VANE_PP_REPEAT(VANE_PP_VA_COUNT flist, VANE_PP_DUCKINTERFACE_BASE_DUCK_DECL_ITEM, flist))	\
-};                                                                                          	    \
-VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY(__NS) ) (										    		    \
-}																									\
-)																					    		    \
-}																									\
-	template<>                                                                              	    \
-		struct duck<__NS::ifname> : vane::VANE_PP_NS_DETAIL_DUCK(ifname)::__NS VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY(__NS) )(::)_duck_XX<__NS::ifname> { \
-			using _duck_XX::_duck_XX;                                                       	    \
-			operator       duck<const          __NS::ifname>&()       { return *reinterpret_cast<      duck<const          __NS::ifname>*>(this); }	\
-			operator const duck<const          __NS::ifname>&() const { return *reinterpret_cast<const duck<const          __NS::ifname>*>(this); }	\
-			operator       duck<      volatile __NS::ifname>&()       { return *reinterpret_cast<      duck<      volatile __NS::ifname>*>(this); }	\
-			operator const duck<      volatile __NS::ifname>&() const { return *reinterpret_cast<const duck<      volatile __NS::ifname>*>(this); }	\
-			operator       duck<const volatile __NS::ifname>&()       { return *reinterpret_cast<      duck<const volatile __NS::ifname>*>(this); }	\
-			operator const duck<const volatile __NS::ifname>&() const { return *reinterpret_cast<const duck<const volatile __NS::ifname>*>(this); }	\
-		};                                                                                      	\
-	template<>                                                                                  	\
-		struct duck<const __NS::ifname> : vane::VANE_PP_NS_DETAIL_DUCK(ifname)::__NS VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY(__NS) )(::)_duck_XX<const __NS::ifname> {\
-			using _duck_XX::_duck_XX;                                                           	\
-			operator       duck<const volatile __NS::ifname>&()       { return *reinterpret_cast<      duck<const volatile __NS::ifname>*>(this); }	\
-			operator const duck<const volatile __NS::ifname>&() const { return *reinterpret_cast<const duck<const volatile __NS::ifname>*>(this); }	\
-		};                                                                                      	\
-	template <>																						\
-		struct duck<volatile __NS::ifname> : vane::VANE_PP_NS_DETAIL_DUCK(ifname)::__NS VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY(__NS) )(::)_duck_XX<volatile __NS::ifname> {\
-			using _duck_XX::_duck_XX;																\
-			operator       duck<const volatile __NS::ifname>&()       { return *reinterpret_cast<      duck<const volatile __NS::ifname>*>(this); }	\
-			operator const duck<const volatile __NS::ifname>&() const { return *reinterpret_cast<const duck<const volatile __NS::ifname>*>(this); }	\
-		};																							\
-	template <>																						\
-		struct duck<const volatile __NS::ifname> : vane::VANE_PP_NS_DETAIL_DUCK(ifname)::__NS VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY(__NS) )(::)_duck_XX<const volatile __NS::ifname> {\
-			using _duck_XX::_duck_XX;																\
-		};																							\
+        __Duck()     : _data(nullptr)   { }                                                         \
+        __Duck(T &t) : _data(&t)        { }                                                         \
+                                                                                                    \
+    public:                                                                                         \
+        VANE_PP_EVAL(VANE_PP_REPEAT(VANE_PP_VA_COUNT flist, VANE_PP_DUCKINTERFACE_T_DUCK_DECL_ITEM, flist)) \
+    };                                                                                              \
+                                                                                                    \
+    struct _Store : __IF {                                                                          \
+        void *_data;                                                                                \
+    };                                                                                              \
+    std::array<char, sizeof(_Store)>    _store;                                                     \
+    using OBJ_TYPE = __IF;                                                                          \
+    OBJ_TYPE *_get_obj() const  { return reinterpret_cast<OBJ_TYPE*>(const_cast<std::array<char, sizeof(_Store)>*>(&_store)); }\
+    OBJ_TYPE *_get_obj() const volatile { return reinterpret_cast<OBJ_TYPE*>(const_cast<std::array<char, sizeof(_Store)>*>(&_store)); }\
+public:                                                                                             \
+        struct bad_duck {                                                                           \
+            VANE_PP_EVAL(VANE_PP_REPEAT(VANE_PP_VA_COUNT flist, VANE_PP_DUCKINTERFACE_BAD_DUCK_DECL_ITEM, flist,__NS::ifname)) \
+        };                                                                                          \
+                                                                                                    \
+    template <typename T, typename                                                                  \
+        =   typename std::enable_if<                                                                \
+                   !std::is_base_of<_duck_XX<const          typename std::remove_cv<__IF>::type>, T>::value \
+                && !std::is_base_of<_duck_XX<      volatile typename std::remove_cv<__IF>::type>, T>::value \
+                && !std::is_base_of<_duck_XX<const volatile typename std::remove_cv<__IF>::type>, T>::value \
+                && ( !std::is_const<T>::value    || std::is_const<__IF>::value )                    \
+                && ( !std::is_volatile<T>::value || std::is_volatile<__IF>::value )                 \
+            >::type>                                                                                \
+    _duck_XX(T &t) {                                                                                \
+        using __T = typename std::remove_cv<T>::type;                                               \
+        new(&_store) __Duck<__T>(const_cast<__T&>(t));                                              \
+    }                                                                                               \
+                                                                                                    \
+    template <typename T>                                                                           \
+    _duck_XX(T *t) : _duck_XX(*t) { }                                                               \
+                                                                                                    \
+public:                                                                                             \
+    _duck_XX() { }                                                                                  \
+    _duck_XX(vane::bad_duck) {                                                                      \
+        new(&_store) __Duck<bad_duck>();                                                            \
+    }                                                                                               \
+    _duck_XX(std::nullptr_t) {                                                                      \
+        std::fill(_store.begin(), _store.end(), 0);                                                 \
+    }                                                                                               \
+    operator __IF&() const          { return *_get_obj(); }                                         \
+    operator __IF*() const          { return  _get_obj(); }                                         \
+    operator __IF&() const volatile { return *_get_obj(); }                                         \
+    operator __IF*() const volatile { return  _get_obj(); }                                         \
+                                                                                                    \
+    operator bool() const          {                                                                \
+        ptrdiff_t *p = (ptrdiff_t*)this;                                                            \
+        return vane::reducer<sizeof(*this)/sizeof(*p)-1>::get(std::bit_or<ptrdiff_t>(), *p, p);     \
+    }                                                                                               \
+    operator bool() const volatile  {                                                               \
+        ptrdiff_t *p = (ptrdiff_t*)this;                                                            \
+        return vane::reducer<sizeof(*this)/sizeof(*p)-1>::get(std::bit_or<ptrdiff_t>(), *p, p);     \
+    }                                                                                               \
+                                                                                                    \
+    VANE_PP_EVAL(VANE_PP_REPEAT(VANE_PP_VA_COUNT flist, VANE_PP_DUCKINTERFACE_BASE_DUCK_DECL_ITEM, flist))  \
+};                                                                                                  \
+VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY(__NS) ) (                                                        \
+}                                                                                                   \
+)                                                                                                   \
+}                                                                                                   \
+    template<>                                                                                      \
+        struct duck<__NS::ifname> : vane::VANE_PP_NS_DETAIL_DUCK(ifname)::__NS VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY(__NS) )(::)_duck_XX<__NS::ifname> { \
+            using _duck_XX::_duck_XX;                                                               \
+            operator       duck<const          __NS::ifname>&()       { return *reinterpret_cast<      duck<const          __NS::ifname>*>(this); } \
+            operator const duck<const          __NS::ifname>&() const { return *reinterpret_cast<const duck<const          __NS::ifname>*>(this); } \
+            operator       duck<      volatile __NS::ifname>&()       { return *reinterpret_cast<      duck<      volatile __NS::ifname>*>(this); } \
+            operator const duck<      volatile __NS::ifname>&() const { return *reinterpret_cast<const duck<      volatile __NS::ifname>*>(this); } \
+            operator       duck<const volatile __NS::ifname>&()       { return *reinterpret_cast<      duck<const volatile __NS::ifname>*>(this); } \
+            operator const duck<const volatile __NS::ifname>&() const { return *reinterpret_cast<const duck<const volatile __NS::ifname>*>(this); } \
+        };                                                                                          \
+    template<>                                                                                      \
+        struct duck<const __NS::ifname> : vane::VANE_PP_NS_DETAIL_DUCK(ifname)::__NS VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY(__NS) )(::)_duck_XX<const __NS::ifname> {\
+            using _duck_XX::_duck_XX;                                                               \
+            operator       duck<const volatile __NS::ifname>&()       { return *reinterpret_cast<      duck<const volatile __NS::ifname>*>(this); } \
+            operator const duck<const volatile __NS::ifname>&() const { return *reinterpret_cast<const duck<const volatile __NS::ifname>*>(this); } \
+        };                                                                                          \
+    template <>                                                                                     \
+        struct duck<volatile __NS::ifname> : vane::VANE_PP_NS_DETAIL_DUCK(ifname)::__NS VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY(__NS) )(::)_duck_XX<volatile __NS::ifname> {\
+            using _duck_XX::_duck_XX;                                                               \
+            operator       duck<const volatile __NS::ifname>&()       { return *reinterpret_cast<      duck<const volatile __NS::ifname>*>(this); } \
+            operator const duck<const volatile __NS::ifname>&() const { return *reinterpret_cast<const duck<const volatile __NS::ifname>*>(this); } \
+        };                                                                                          \
+    template <>                                                                                     \
+        struct duck<const volatile __NS::ifname> : vane::VANE_PP_NS_DETAIL_DUCK(ifname)::__NS VANE_PP_WHEN( VANE_PP_IS_NOT_EMPTY(__NS) )(::)_duck_XX<const volatile __NS::ifname> {\
+            using _duck_XX::_duck_XX;                                                               \
+        };                                                                                          \
 }/*namespace vane/////////////////////////////////////////////////////////////////// */
+
+
+namespace vane {/////////////////////////////////////////////////////////////////////////////////////////////
+namespace __gstack2 {/////////////////////////////////////////////////////////////////////////////////////////////
+//gstack2
+//subject to change soon
+
+struct gstack_default_traits
+{
+    enum {
+        INITIAL_ANCHOR_CHUNK_SIZE   = 1,
+        INITIAL_DATA_CHUNK_SIZE     = 1024,
+    };
+};
+
+template<typename __Traits=gstack_default_traits, typename __Alloc=std::allocator<char>>
+struct _GStack;
+
+using gstack = _GStack<gstack_default_traits, std::allocator<char>>;
+
+
+
+template<typename __GStack>
+struct _Anchor
+{
+    __GStack    *_gstack;
+    uint32_t    _index;
+    _Anchor     *_owner;
+    _Anchor     *_prev;
+    void        *_data;
+
+    uint32_t chunk_index() const {
+        return _index >> (32-5);
+    }
+
+    uint32_t local_index() const {
+        return _index & ((1U << (32-5)) - 1);
+    }
+};
+
+
+template<typename __GStack>
+struct _AnchorChunk
+{
+    using _Anchor = ::_Anchor<__GStack>;
+
+    _AnchorChunk    *_prev;
+    _Anchor         _anchors[];
+
+    static
+    size_t allocated_size(size_t cnt) {
+        return sizeof(_AnchorChunk) + cnt*sizeof(_Anchor);
+    }
+};
+
+
+template<typename __GStack, typename __Alloc = std::allocator<char>>
+class _AnchorStack : private __Alloc
+{
+    using _Anchor       = ::_Anchor<__GStack>;
+    using _AnchorChunk = ::_AnchorChunk<__GStack>;
+
+    __GStack        *_gstack;
+    unsigned        _top;
+    unsigned        _limit;
+    uint32_t        _index;
+    _AnchorChunk    *_chunk;
+    _AnchorChunk    *_free_chunks;
+    _Anchor         *_frame;
+
+public:
+    using allocator_type    =   __Alloc;
+    using _Chunk            = _AnchorChunk;
+
+    _AnchorStack(__GStack *gstack, size_t initial_index=1)
+        : _gstack(gstack)
+        , _top(0), _limit(1 << initial_index), _index(initial_index)
+        , _chunk( allocate_chunk(_limit) ), _free_chunks(nullptr)
+        , _frame(nullptr)
+    { }
+    _AnchorStack(__GStack *gstack, size_t initial_index, __Alloc &alloc)
+        : __Alloc(alloc)
+        , _gstack(gstack)
+        , _top(0), _limit(1 << initial_index), _index(initial_index)
+        , _chunk( allocate_chunk(initial_index) ), _free_chunks(nullptr)
+        , _frame(nullptr)
+    { }
+
+    ~_AnchorStack()
+    {
+        _Chunk *chunk = _chunk;
+        _Chunk *prev  = _chunk;
+        unsigned cnt = _limit;
+        for(; chunk ; chunk=prev, cnt/=2 ) {
+            prev = prev->_prev;
+            deallocate_chunk(chunk, cnt);
+        }
+
+        cnt = _limit*2;
+        chunk = _free_chunks;
+        prev  = _free_chunks;
+        for(; chunk ; chunk=prev, cnt*=2 ) {
+            prev = prev->_prev;
+            deallocate_chunk(chunk, cnt);
+        }
+    }
+
+
+    _Chunk *allocate_chunk( unsigned cnt, _Chunk *prev=nullptr )
+    {
+        _Chunk *chunk = (_Chunk*)get_allocator().allocate( _chunk->allocated_size(cnt) );
+                chunk->_prev  = prev;
+        return chunk;
+    }
+
+    void deallocate_chunk( _Chunk *chunk, unsigned cnt )
+    {
+        get_allocator().deallocate((char*)chunk, chunk->allocated_size(cnt));
+    }
+
+    __Alloc &get_allocator() {
+        return *this;
+    }
+
+    void shift_chunk()
+    {
+        unsigned new_index = _index + 1;
+        unsigned new_limit = 2 * _limit;
+
+        _Chunk *new_chunk;
+        if( _free_chunks ) {
+            new_chunk    = _free_chunks;
+            _free_chunks = _free_chunks->_prev;
+        }
+        else {
+            new_chunk = allocate_chunk(new_limit);
+        }
+
+        new_chunk->_prev = _chunk;
+        _chunk = new_chunk;
+
+        _top = 0;
+        _limit = new_limit;
+        _index = new_index;
+    }
+
+    void unshift_chunk()
+    {
+        _Chunk *old_chunk = _chunk;
+        _chunk = old_chunk->_prev;
+
+        old_chunk->_prev = _free_chunks;
+        _free_chunks = old_chunk;
+
+        _index -= 1;
+        _limit >>= 1;
+        _top = _limit;
+    }
+
+    unsigned make_anchor_index(unsigned index) {
+        return (_index << (32-5)) | index;
+    }
+
+    _Anchor &push_anchor(void *buf)
+    {
+        if( _top >= _limit ) {
+            shift_chunk();
+        }
+
+        _Anchor *anchor = &_chunk->_anchors[_top];
+        anchor->_gstack = _gstack;
+        anchor->_index  = make_anchor_index(_top);
+        anchor->_owner  = anchor;
+        anchor->_prev   = _frame;
+        anchor->_data   = buf;
+        _frame = anchor;
+
+        ++_top;
+
+        return *anchor;
+    }
+
+    _Anchor &get_frame() {
+        return *_frame;
+    }
+};
+
+
+
+struct _DataChunk
+{
+    _DataChunk  *_prev;
+    unsigned    _chunk_size;
+    char        _data[];
+
+    unsigned capacity() {
+        return _chunk_size - sizeof(_DataChunk);
+    }
+
+    void *data_begin() {
+        return &_data[0];
+    }
+
+    void *data_end() {
+        return (char*)this + _chunk_size;
+    }
+
+    bool having(void *pos)
+    {
+        return (uintptr_t)((char*)pos - (char*)this) < (uintptr_t)_chunk_size;
+    }
+};
+
+
+template<typename __Traits, typename __Alloc>
+struct _GStack : private __Alloc
+{
+    using __GStack      = _GStack;
+    using _Anchor       = ::_Anchor<__GStack>;
+    using _AnchorChunk = ::_AnchorChunk<__GStack>;
+    using _AnchorStack  = ::_AnchorStack<__GStack,__Alloc>;
+
+    _AnchorStack    _anchor_stack;
+    void            *_top;
+    void            *_limit;
+    _DataChunk      *_data_chunk;
+    _DataChunk      *_free_chunk;
+    unsigned        _extra_size;
+
+public:
+    _GStack() 
+        : _anchor_stack(this, (size_t)__Traits::INITIAL_ANCHOR_CHUNK_SIZE)
+        , _data_chunk( allocate_chunk(__Traits::INITIAL_DATA_CHUNK_SIZE) )
+        , _free_chunk( nullptr )
+        , _extra_size(0)
+    {
+        _anchor_stack.push_anchor( &_data_chunk->_data[0] );
+        _top   = _data_chunk->data_begin();
+        _limit = _data_chunk->data_end();
+    }
+
+    _GStack(__Alloc &a) 
+        : __Alloc(a)
+        , _anchor_stack(this, __Traits::INITIAL_ANCHOR_CHUNK_SIZE, a)
+        , _data_chunk( allocate_chunk(__Traits::INITIAL_DATA_CHUNK_SIZE) )
+        , _free_chunk( nullptr )
+        , _extra_size(0)
+    {
+        _anchor_stack.push_anchor( &_data_chunk->_data[0] );
+        _top   = _data_chunk->data_begin();
+        _limit = _data_chunk->data_end();
+    }
+
+
+    __Alloc &get_allocator() {
+        return *this;
+    }
+
+    _Anchor &get_frame() {
+        return _anchor_stack.get_frame();
+    }
+
+    _DataChunk *allocate_chunk( unsigned chunk_size )
+    {
+        _DataChunk *chunk = (_DataChunk*)get_allocator().allocate( chunk_size );
+        chunk->_chunk_size = chunk_size;
+
+        return chunk;
+    }
+
+    void deallocate_chunk( _DataChunk *chunk )
+    {
+        get_allocator().deallocate((char*)chunk, chunk->_chunk_size);
+    }
+
+    void setback(_Anchor *to)
+    {
+        auto to_chunk = to->chunk_index();
+
+        while( to_chunk < _anchor_stack._index ) {
+            _anchor_stack.unshift_chunk();
+        }
+        _anchor_stack._top = to->local_index();
+
+
+        unsigned sum = 0;
+        _DataChunk *keep = nullptr;
+
+        _DataChunk *dc   = _data_chunk;
+        for(; !dc->having(to->_data) ; dc=dc->_prev) {
+            if( keep ) {
+                sum += keep->capacity();
+                deallocate_chunk( keep );
+            }
+            keep = dc;
+        }
+        _data_chunk = dc;
+        _top   = to->_data;
+        _limit = dc->data_end();
+
+        if( _extra_size || sum || (keep && _free_chunk) ) {
+            if( keep ) {
+                sum += keep->capacity();
+                deallocate_chunk( keep );
+            }
+            if( _free_chunk ) {
+                sum += _free_chunk->capacity();
+                deallocate_chunk( _free_chunk );
+                _free_chunk = nullptr;
+            }
+            _extra_size += sum;
+        }
+        else {
+            if( keep )
+                _free_chunk = keep;
+        }
+    }
+};
+
+}//namespace __gstack2///////////////////////////////////////////////////////////////////////////////////////
+}//namespace vane////////////////////////////////////////////////////////////////////////////////////////////
 
 
 #endif  //___VANE_H_20170719
